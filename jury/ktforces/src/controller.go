@@ -60,20 +60,14 @@ func (dc *DataController) AddUser(user *User) (err error) {
 	listKey := "users"
 	pipe := dc.TxPipeline()
 	cmd := pipe.SetNX(key, buf.Bytes(), 0)
-	listCmd := pipe.RPush(listKey, user.Username)
-	_, _ = pipe.Exec()
-
-	ok, err := cmd.Result()
-	if err != nil {
+	pipe.RPush(listKey, user.Username)
+	if _, err = pipe.Exec(); err != nil {
 		return
 	}
+
+	ok := cmd.Val()
 	if !ok {
 		return ErrUserExists
-	}
-
-	err = listCmd.Err()
-	if err != nil {
-		return
 	}
 
 	return nil
@@ -84,21 +78,16 @@ func (dc *DataController) GetUser(username string) (fullUser *User, err error) {
 	key := "user:" + username
 	userExists := pipe.Exists(key)
 	userData := pipe.Get(key)
-	_, _ = pipe.Exec()
-
-	exists, err := userExists.Result()
-	if err != nil {
+	if _, err = pipe.Exec(); err != nil {
 		return
 	}
+
+	exists := userExists.Val()
 	if exists == 0 {
 		return nil, ErrInvalidCreds
 	}
 
-	data, err := userData.Result()
-	if err != nil {
-		return
-	}
-
+	data := userData.Val()
 	buf := bytes.NewBuffer([]byte(data))
 	decoder := json.NewDecoder(buf)
 
@@ -191,18 +180,14 @@ func (dc *DataController) listTasksByKey(key string, limit, offset int64) (resul
 	cntCmd := pipe.LLen(key)
 	resCmd := pipe.LRange(key, offset, offset+limit-1)
 
-	_, _ = pipe.Exec()
+	if _, err = pipe.Exec(); err != nil {
+		return
+	}
 
 	result = new(TaskListing)
-	if result.Count, err = cntCmd.Result(); err != nil {
-		return
-	}
-	tasksData, err := resCmd.Result()
-	if err != nil {
-		return
-	}
+	result.Count = cntCmd.Val()
+	result.TaskIDs = resCmd.Val()
 
-	result.TaskIDs = tasksData
 	return
 }
 
@@ -227,7 +212,7 @@ func (dc *DataController) addSubmission(task *Task, username string) (score floa
 		return 0, ErrAlreadySubmitted
 	}
 	scoreboardKey := "scoreboard"
-	score, err = dc.ZIncrBy(scoreboardKey, 1.0, username).Result()
+	score, err = dc.ZIncrBy(scoreboardKey, -1.0, username).Result()
 	return
 }
 
@@ -242,27 +227,38 @@ func (dc *DataController) SubmitTask(getForm *GetTaskForm, submitForm *TaskSubmi
 	if task.Flag != submitForm.Flag {
 		return 0, ErrInvalidFlag
 	}
-	score, err = dc.addSubmission(task, username)
+	if score, err = dc.addSubmission(task, username); err != nil {
+		return
+	}
+	score = -score
 	return
 }
 
-func (dc *DataController) GetUserRankings(form *UserRankingForm) (result []*UserRank, err error) {
+func (dc *DataController) GetUserRankings(form *UserRankingForm) (result *UserRanking, err error) {
+	pipe := dc.TxPipeline()
 	scoreboardKey := "scoreboard"
-	data, err := dc.ZRangeWithScores(scoreboardKey, form.Offset, form.Offset+form.Limit-1).Result()
-	if err != nil {
+	cntCmd := pipe.ZCard(scoreboardKey)
+	dataCmd := pipe.ZRangeWithScores(scoreboardKey, form.Offset, form.Offset+form.Limit-1)
+	if _, err = pipe.Exec(); err != nil {
 		return
 	}
-	result = make([]*UserRank, 0, len(data))
+
+	data := dataCmd.Val()
+
+	result = new(UserRanking)
+	result.Count = cntCmd.Val()
+	result.Ranks = make([]*UserScore, 0, len(data))
+
 	for _, z := range data {
-		rank := new(UserRank)
+		rank := new(UserScore)
 
 		var ok bool
 		rank.Username, ok = z.Member.(string)
 		if !ok {
 			continue
 		}
-		rank.Score = z.Score
-		result = append(result, rank)
+		rank.Score = -z.Score
+		result.Ranks = append(result.Ranks, rank)
 	}
 	return
 }

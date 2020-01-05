@@ -56,7 +56,12 @@ type UserRankingForm struct {
 	Offset int64 `form:"offset" binding:"min=0"`
 }
 
-type UserRank struct {
+type UserScore struct {
 	Username string  `json:"username"`
 	Score    float64 `json:"score"`
+}
+
+type UserRanking struct {
+	Count int64        `json:"count"`
+	Ranks []*UserScore `json:"ranks"`
 }
