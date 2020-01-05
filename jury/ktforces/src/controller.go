@@ -15,6 +15,7 @@ var (
 	ErrTaskNotFound     = errors.New("no such task")
 	ErrInvalidFlag      = errors.New("invalid flag")
 	ErrAlreadySubmitted = errors.New("already submitted")
+	ErrTaskIsYours      = errors.New("task is yours")
 )
 
 type DataController struct {
@@ -32,13 +33,13 @@ func NewDataController() *DataController {
 		Addr:         redisHost,
 		DB:           1,
 		MaxRetries:   5,
-		PoolSize:     20,
-		MinIdleConns: 5,
+		PoolSize:     50,
+		MinIdleConns: 10,
 	})
 
 	dc.SessionStorage = NewSessionStorage()
 
-	_, err := dc.Client.Ping().Result()
+	err := dc.Client.Ping().Err()
 	if err != nil {
 		logrus.Fatal("Error connecting to redis: ", err)
 	}
@@ -47,7 +48,7 @@ func NewDataController() *DataController {
 	return &dc
 }
 
-func (dc *DataController) TrySetUser(user *User) (err error) {
+func (dc *DataController) AddUser(user *User) (err error) {
 	buf := new(bytes.Buffer)
 	encoder := json.NewEncoder(buf)
 	err = encoder.Encode(user)
@@ -56,7 +57,12 @@ func (dc *DataController) TrySetUser(user *User) (err error) {
 	}
 
 	key := "user:" + user.Username
-	cmd := dc.SetNX(key, buf.Bytes(), 0)
+	listKey := "users"
+	pipe := dc.TxPipeline()
+	cmd := pipe.SetNX(key, buf.Bytes(), 0)
+	listCmd := pipe.RPush(listKey, user.Username)
+	_, _ = pipe.Exec()
+
 	ok, err := cmd.Result()
 	if err != nil {
 		return
@@ -64,10 +70,16 @@ func (dc *DataController) TrySetUser(user *User) (err error) {
 	if !ok {
 		return ErrUserExists
 	}
+
+	err = listCmd.Err()
+	if err != nil {
+		return
+	}
+
 	return nil
 }
 
-func (dc *DataController) TryGetUser(username string) (fullUser *User, err error) {
+func (dc *DataController) GetUser(username string) (fullUser *User, err error) {
 	pipe := dc.TxPipeline()
 	key := "user:" + username
 	userExists := pipe.Exists(key)
@@ -94,6 +106,17 @@ func (dc *DataController) TryGetUser(username string) (fullUser *User, err error
 	if err = decoder.Decode(fullUser); err != nil {
 		return
 	}
+	return
+}
+
+func (dc *DataController) GetUserProfile(form *GetUserForm) (profile *UserProfile, err error) {
+	user, err := dc.GetUser(form.Username)
+	if err != nil {
+		return
+	}
+	profile = new(UserProfile)
+	profile.Username = user.Username
+	profile.Name = user.Name
 	return
 }
 
@@ -127,7 +150,7 @@ func (dc *DataController) AddTask(task *Task, username string) (err error) {
 	return
 }
 
-func (dc *DataController) tryGetTask(taskID string) (task *Task, err error) {
+func (dc *DataController) getTask(taskID string) (task *Task, err error) {
 	pipe := dc.TxPipeline()
 	key := "task:" + taskID
 	taskExists := pipe.Exists(key)
@@ -148,8 +171,8 @@ func (dc *DataController) tryGetTask(taskID string) (task *Task, err error) {
 	return
 }
 
-func (dc *DataController) TryGetTaskSafe(taskID, username string) (task *Task, err error) {
-	task, err = dc.tryGetTask(taskID)
+func (dc *DataController) GetTaskSafe(form *GetTaskForm, username string) (task *Task, err error) {
+	task, err = dc.getTask(form.ID)
 	if err != nil {
 		return
 	}
@@ -164,16 +187,11 @@ func (dc *DataController) TryGetTaskSafe(taskID, username string) (task *Task, e
 }
 
 func (dc *DataController) listTasksByKey(key string, limit, offset int64) (result *TaskListing, err error) {
-	if limit > 50 {
-		limit = 50
-	}
 	pipe := dc.TxPipeline()
 	cntCmd := pipe.LLen(key)
 	resCmd := pipe.LRange(key, offset, offset+limit-1)
 
-	if _, err = pipe.Exec(); err != nil {
-		return
-	}
+	_, _ = pipe.Exec()
 
 	result = new(TaskListing)
 	if result.Count, err = cntCmd.Result(); err != nil {
@@ -213,14 +231,38 @@ func (dc *DataController) addSubmission(task *Task, username string) (score floa
 	return
 }
 
-func (dc *DataController) TrySubmitTask(getForm *GetTaskForm, submitForm *TaskSubmitForm, username string) (score float64, err error) {
-	task, err := dc.tryGetTask(getForm.ID)
+func (dc *DataController) SubmitTask(getForm *GetTaskForm, submitForm *TaskSubmitForm, username string) (score float64, err error) {
+	task, err := dc.getTask(getForm.ID)
 	if err != nil {
 		return
+	}
+	if task.Author == username {
+		return 0, ErrTaskIsYours
 	}
 	if task.Flag != submitForm.Flag {
 		return 0, ErrInvalidFlag
 	}
 	score, err = dc.addSubmission(task, username)
+	return
+}
+
+func (dc *DataController) GetUserRankings(form *UserRankingForm) (result []*UserRank, err error) {
+	scoreboardKey := "scoreboard"
+	data, err := dc.ZRangeWithScores(scoreboardKey, form.Offset, form.Offset+form.Limit-1).Result()
+	if err != nil {
+		return
+	}
+	result = make([]*UserRank, 0, len(data))
+	for _, z := range data {
+		rank := new(UserRank)
+
+		var ok bool
+		rank.Username, ok = z.Member.(string)
+		if !ok {
+			continue
+		}
+		rank.Score = z.Score
+		result = append(result, rank)
+	}
 	return
 }

@@ -17,7 +17,7 @@ func (ks *KTFServer) withCurrentUser() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		user, err := ks.DataController.TryGetUser(username)
+		user, err := ks.DataController.GetUser(username)
 		if err != nil {
 			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 			c.Abort()

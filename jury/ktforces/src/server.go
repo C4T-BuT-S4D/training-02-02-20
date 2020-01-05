@@ -33,11 +33,16 @@ func (ks *KTFServer) registerRoutes() {
 	api.POST("/register/", ks.registerHandler())
 	api.POST("/login/", ks.loginHandler())
 
+	ranking := api.Group("/")
+	ranking.GET("/scoreboard/", ks.userRankingHandler())
+	ranking.GET("/ranking/", ks.userRankingHandler())
+
 	authorized := api.Group("/")
 	authorized.Use(ks.withCurrentUser())
 
 	users := authorized.Group("/users")
 	users.GET("/me/", ks.meHandler())
+	users.GET("/profile/:username/", ks.userProfileHandler())
 
 	tasks := authorized.Group("/tasks")
 	tasks.POST("/", ks.createTaskHandler())

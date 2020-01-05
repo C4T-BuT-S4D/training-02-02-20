@@ -20,7 +20,7 @@ func (ks *KTFServer) registerHandler() gin.HandlerFunc {
 			return
 		}
 
-		if err := ks.DataController.TrySetUser(user); err != nil {
+		if err := ks.DataController.AddUser(user); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
@@ -37,7 +37,7 @@ func (ks *KTFServer) loginHandler() gin.HandlerFunc {
 			return
 		}
 
-		user, err := ks.DataController.TryGetUser(data.Username)
+		user, err := ks.DataController.GetUser(data.Username)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
@@ -55,6 +55,24 @@ func (ks *KTFServer) loginHandler() gin.HandlerFunc {
 func (ks *KTFServer) meHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		user, _ := c.Get("user")
+		c.JSON(http.StatusOK, user)
+	}
+}
+
+func (ks *KTFServer) userProfileHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userForm := new(GetUserForm)
+		if err := c.ShouldBindUri(userForm); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		user, err := ks.DataController.GetUserProfile(userForm)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
 		c.JSON(http.StatusOK, user)
 	}
 }
@@ -90,7 +108,7 @@ func (ks *KTFServer) getTaskHandler() gin.HandlerFunc {
 		}
 
 		user, _ := c.Get("user")
-		task, err := ks.DataController.TryGetTaskSafe(taskForm.ID, user.(*User).Username)
+		task, err := ks.DataController.GetTaskSafe(taskForm, user.(*User).Username)
 		if err != nil {
 			status := http.StatusBadRequest
 			if err == ErrTaskNotFound {
@@ -137,12 +155,29 @@ func (ks *KTFServer) submitTaskHandler() gin.HandlerFunc {
 		}
 
 		user, _ := c.Get("user")
-		score, err := ks.DataController.TrySubmitTask(getForm, submitForm, user.(*User).Username)
+		score, err := ks.DataController.SubmitTask(getForm, submitForm, user.(*User).Username)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 
 		c.JSON(http.StatusOK, gin.H{"status": "OK", "score": score})
+	}
+}
+
+func (ks *KTFServer) userRankingHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		rankingForm := new(UserRankingForm)
+		if err := c.ShouldBindQuery(rankingForm); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		data, err := ks.DataController.GetUserRankings(rankingForm)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, data)
 	}
 }

@@ -1,9 +1,18 @@
 package main
 
 type User struct {
-	Username string `json:"username" binding:"required"`
+	Username string `json:"username" binding:"required,min=5,max=255"`
 	Password string `json:"password" binding:"required"`
 	Name     string `json:"name" binding:"required"`
+}
+
+type UserProfile struct {
+	Username string `json:"username"`
+	Name     string `json:"name"`
+}
+
+type GetUserForm struct {
+	Username string `json:"username" form:"username" uri:"username" binding:"required"`
 }
 
 type LoginForm struct {
@@ -40,4 +49,14 @@ type TaskListingForm struct {
 
 type TaskSubmitForm struct {
 	Flag string `json:"flag" binding:"required"`
+}
+
+type UserRankingForm struct {
+	Limit  int64 `form:"limit" binding:"min=1,max=50"`
+	Offset int64 `form:"offset" binding:"min=0"`
+}
+
+type UserRank struct {
+	Username string  `json:"username"`
+	Score    float64 `json:"score"`
 }
