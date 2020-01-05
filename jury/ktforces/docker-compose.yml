@@ -1,0 +1,16 @@
+version: '2.4'
+
+services:
+  ktforces:
+    build: ""
+    ports:
+      - 9998:9998
+    env_file:
+      - environment.env
+    restart: on-failure
+
+  redis:
+    image: redis:5.0.7-alpine
+    restart: on-failure
+    sysctls:
+      - net.core.somaxconn=1024
