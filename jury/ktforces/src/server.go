@@ -32,6 +32,7 @@ func (ks *KTFServer) registerRoutes() {
 
 	api.POST("/register/", ks.registerHandler())
 	api.POST("/login/", ks.loginHandler())
+	api.GET("/logout/", ks.logoutHandler())
 
 	ranking := api.Group("/")
 	ranking.GET("/scoreboard/", ks.userRankingHandler())

@@ -52,6 +52,13 @@ func (ks *KTFServer) loginHandler() gin.HandlerFunc {
 	}
 }
 
+func (ks *KTFServer) logoutHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.SetCookie("session", "", 0, "/", "", false, true)
+		c.JSON(http.StatusOK, gin.H{"status": "OK"})
+	}
+}
+
 func (ks *KTFServer) meHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		user, _ := c.Get("user")
