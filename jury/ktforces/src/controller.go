@@ -2,8 +2,11 @@ package main
 
 import (
 	"bytes"
+	"crypto/hmac"
+	"crypto/sha1"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/go-redis/redis/v7"
 	"github.com/sirupsen/logrus"
 	"os"
@@ -16,6 +19,7 @@ var (
 	ErrInvalidFlag      = errors.New("invalid flag")
 	ErrAlreadySubmitted = errors.New("already submitted")
 	ErrTaskIsYours      = errors.New("task is yours")
+	ErrInvalidPoW       = errors.New("invalid proof of work")
 )
 
 type DataController struct {
@@ -261,4 +265,50 @@ func (dc *DataController) GetUserRankings(form *UserRankingForm) (result *UserRa
 		result.Ranks = append(result.Ranks, rank)
 	}
 	return
+}
+
+func (dc *DataController) SavePoW(pow *ProofOfWork) (err error) {
+	key := "pow:" + pow.Key
+	return dc.Set(key, pow.Nonce, 0).Err()
+}
+
+func (dc *DataController) ValidatePoW(pow *ProofOfWorkData) (err error) {
+	key := "pow:" + pow.Key
+	pipe := dc.TxPipeline()
+	existsCmd := pipe.Exists(key)
+	valueCmd := pipe.Get(key)
+	pipe.Del(key)
+
+	if _, err = pipe.Exec(); err != nil {
+		return
+	}
+
+	exists := existsCmd.Val()
+	if exists == 0 {
+		return ErrInvalidPoW
+	}
+
+	value := valueCmd.Val()
+	if value != pow.Nonce {
+		return ErrInvalidPoW
+	}
+
+	hm := hmac.New(sha1.New, []byte("d528291b1e8e61b84389760fce409faf9c4be2c3"))
+	hm.Write([]byte(pow.Nonce))
+	sm := fmt.Sprintf("%x", hm.Sum(nil))
+
+	if sm == pow.Answer {
+		return nil
+	}
+
+	hs := sha1.New()
+	_, err = hs.Write([]byte(value + pow.Answer))
+	if err != nil {
+		return
+	}
+	if fmt.Sprintf("%x", hs.Sum(nil))[:6] != "133337" {
+		return ErrInvalidPoW
+	}
+
+	return nil
 }

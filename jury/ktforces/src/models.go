@@ -65,3 +65,19 @@ type UserRanking struct {
 	Count int64        `json:"count"`
 	Ranks []*UserScore `json:"ranks"`
 }
+
+type ProofOfWork struct {
+	Key   string `json:"key"`
+	Nonce string `json:"nonce"`
+}
+
+type ProofOfWorkData struct {
+	Key    string `json:"key" binding:"required,uuid4"`
+	Nonce  string `json:"nonce" binding:"required,uuid4"`
+	Answer string `json:"answer" binding:"required"`
+}
+
+type CreateTaskForm struct {
+	Task    *Task            `json:"task" binding:"required"`
+	PoWData *ProofOfWorkData `json:"pow" binding:"required"`
+}

@@ -41,6 +41,8 @@ func (ks *KTFServer) registerRoutes() {
 	authorized := api.Group("/")
 	authorized.Use(ks.withCurrentUser())
 
+	authorized.GET("/captcha/", ks.captchaGeneratorHandler())
+
 	users := authorized.Group("/users")
 	users.GET("/me/", ks.meHandler())
 	users.GET("/profile/:username/", ks.userProfileHandler())

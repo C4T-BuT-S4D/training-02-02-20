@@ -86,11 +86,18 @@ func (ks *KTFServer) userProfileHandler() gin.HandlerFunc {
 
 func (ks *KTFServer) createTaskHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		task := new(Task)
-		if err := c.ShouldBindJSON(task); err != nil {
+		tf := new(CreateTaskForm)
+		if err := c.ShouldBindJSON(tf); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
+
+		if err := ks.DataController.ValidatePoW(tf.PoWData); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		task := tf.Task
 		tmpID, _ := uuid.NewRandom()
 		task.ID = tmpID.String()
 
@@ -186,5 +193,21 @@ func (ks *KTFServer) userRankingHandler() gin.HandlerFunc {
 			return
 		}
 		c.JSON(http.StatusOK, data)
+	}
+}
+
+func (ks *KTFServer) captchaGeneratorHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		pow := &ProofOfWork{
+			Key:   uuid.New().String(),
+			Nonce: uuid.New().String(),
+		}
+		err := ks.DataController.SavePoW(pow)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, pow)
 	}
 }
