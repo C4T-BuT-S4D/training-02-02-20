@@ -64,7 +64,7 @@ func (dc *DataController) AddUser(user *User) (err error) {
 	listKey := "users"
 	pipe := dc.TxPipeline()
 	cmd := pipe.SetNX(key, buf.Bytes(), 0)
-	pipe.RPush(listKey, user.Username)
+	pipe.LPush(listKey, user.Username)
 	if _, err = pipe.Exec(); err != nil {
 		return
 	}
@@ -127,14 +127,14 @@ func (dc *DataController) AddTask(task *Task, username string) (err error) {
 
 	pipe := dc.TxPipeline()
 	pipe.Set(taskKey, buf.Bytes(), 0)
-	pipe.RPush(allTasksKey, task.ID)
-	pipe.RPush(userTasksKey, task.ID)
+	pipe.LPush(allTasksKey, task.ID)
+	pipe.LPush(userTasksKey, task.ID)
 
 	if task.Public {
 		publicKey := "tasks:public"
-		pipe.RPush(publicKey, task.ID)
+		pipe.LPush(publicKey, task.ID)
 		userPublicKey := "tasks:public:user:" + username
-		pipe.RPush(userPublicKey, task.ID)
+		pipe.LPush(userPublicKey, task.ID)
 	}
 
 	if _, err = pipe.Exec(); err != nil {
