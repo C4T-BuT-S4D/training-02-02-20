@@ -2,7 +2,7 @@
     {{template "header"}}
     <div class="ui text container">
 
-        <video controls>
+        <video controls width="640">
             <source src="/{{ .VideoPath}}" type="video/webm"/>
             <track label="Text" kind="subtitles" srclang="en" src="{{ .VttPath }}" default>
             <p>Video is not supported in your browser</p>

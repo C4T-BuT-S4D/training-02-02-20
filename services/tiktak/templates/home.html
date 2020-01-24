@@ -12,7 +12,7 @@
                 <div class="ui secondary segment">
                     <p><b>ID:</b> {{.ID}}</p>
                     <p><a href="/watch/{{ .ID}}">Watch</a></p>
-                    <a href="/watch/{{ .ID}}"><img class="thumbnail" width="256" src="{{ .Preview}}"></a>
+                    <a href="/watch/{{ .ID}}"><img class="thumbnail" width="256" height="144" src="{{ .Preview}}"></a>
                     <p>Description: {{ .Description}}</p>
                     {{ if .Private}}
                         <p>Share Token: {{ .Token}}</p>

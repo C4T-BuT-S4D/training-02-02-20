@@ -11,10 +11,6 @@ func SetSalt(s string) {
 	Salt = s
 }
 
-func RandomSalt() {
-
-}
-
 func Validate(id string, hash string) bool {
 	return Generate(id) == hash
 }
