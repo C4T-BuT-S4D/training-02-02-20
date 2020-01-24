@@ -1,3 +1,7 @@
+services/tiktak/public/static/*
+services/tiktak/public/video/*
+services/tiktak/public/vtt/*
+services/tiktak/db_data/*
 # Created by .ignore support plugin (hsz.mobi)
 ### macOS template
 # General

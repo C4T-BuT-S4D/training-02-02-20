@@ -1,0 +1,38 @@
+{{define "create"}}
+    {{template "header" .Error}}
+    <div class="ui text container">
+        <h1 class="ui header">Upload new video</h1>
+        <div class="ui one column grid">
+            <div class="column">
+                <div class="ui message">
+                    <h4 class="ui header">Upload your best moments (only webm is supported)</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+    <br>
+    <div class="ui text container">
+        <form class="ui form" method="post" action="" enctype="multipart/form-data">
+            <div class="field">
+                <label>Description:</label>
+                <input required type="text" style="width: 30%;" name="description" placeholder="kek">
+            </div>
+            <div class="field">
+                <label>Add caption to your video</label>
+                <textarea required rows="3" style="width: 30%" name="subtitles" placeholder="Some text"></textarea>
+            </div>
+            <div class="field">
+                <div class="ui checkbox">
+                    <input name="private" type="checkbox" tabindex="0" class="hidden">
+                    <label>Make video private</label>
+                </div>
+            </div>
+            <div class="field">
+                <input type="file" name="video" required id="fileupload"/>
+            </div>
+            <button class="ui button" type="submit">Submit</button>
+        </form>
+    </div>
+
+    {{template "footer"}}
+{{ end }}

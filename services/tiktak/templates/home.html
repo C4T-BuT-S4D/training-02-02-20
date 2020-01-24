@@ -1,0 +1,26 @@
+{{define "home"}}
+    {{template "header" }}
+
+    <div class="ui text container">
+        <p>You can add new video <a href="/create">here</a></p>
+        <h3>Your videos:</h3>
+    </div>
+    <br>
+    <div class="ui grid">
+        {{range .}}
+            <div class="four wide column">
+                <div class="ui secondary segment">
+                    <p><b>ID:</b> {{.ID}}</p>
+                    <p><a href="/watch/{{ .ID}}">Watch</a></p>
+                    <a href="/watch/{{ .ID}}"><img class="thumbnail" width="256" src="{{ .Preview}}"></a>
+                    <p>Description: {{ .Description}}</p>
+                    {{ if .Private}}
+                        <p>Share Token: {{ .Token}}</p>
+                    {{ end }}
+                </div>
+            </div>
+        {{ end}}
+    </div>
+
+    {{template "footer"}}
+{{ end }}
