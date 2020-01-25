@@ -105,7 +105,7 @@ func (dc *DataController) GetUser(username string) (fullUser *User, err error) {
 	if err = decoder.Decode(fullUser); err != nil {
 		return
 	}
-	fullUser.Score = userScore.Val()
+	fullUser.Score = -userScore.Val()
 
 	return
 }
