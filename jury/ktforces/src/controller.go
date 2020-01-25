@@ -110,8 +110,8 @@ func (dc *DataController) GetUser(username string) (fullUser *User, err error) {
 	return
 }
 
-func (dc *DataController) GetUserProfile(form *GetUserForm) (profile *User, err error) {
-	user, err := dc.GetUser(form.Username)
+func (dc *DataController) GetUserProfile(form *GetUserForm) (user *User, err error) {
+	user, err = dc.GetUser(form.Username)
 	if err != nil {
 		return
 	}
