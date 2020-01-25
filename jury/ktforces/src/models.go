@@ -1,14 +1,10 @@
 package main
 
 type User struct {
-	Username string `json:"username" binding:"required,min=5,max=255"`
-	Password string `json:"password" binding:"required"`
-	Name     string `json:"name" binding:"required"`
-}
-
-type UserProfile struct {
-	Username string `json:"username"`
-	Name     string `json:"name"`
+	Username string  `json:"username" binding:"required,min=5,max=255"`
+	Password string  `json:"password,omitempty" binding:"required"`
+	Name     string  `json:"name" binding:"required"`
+	Score    float64 `json:"score" binding:"isdefault"`
 }
 
 type GetUserForm struct {
