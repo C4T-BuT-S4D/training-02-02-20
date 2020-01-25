@@ -22,6 +22,10 @@ var (
 	ErrInvalidPoW       = errors.New("invalid proof of work")
 )
 
+const (
+	scoreboardKey = "scoreboard"
+)
+
 type DataController struct {
 	*redis.Client
 	*SessionStorage
@@ -65,6 +69,7 @@ func (dc *DataController) AddUser(user *User) (err error) {
 	pipe := dc.TxPipeline()
 	cmd := pipe.SetNX(key, buf.Bytes(), 0)
 	pipe.LPush(listKey, user.Username)
+	pipe.ZIncrBy(scoreboardKey, 0, user.Username)
 	if _, err = pipe.Exec(); err != nil {
 		return
 	}
@@ -82,6 +87,7 @@ func (dc *DataController) GetUser(username string) (fullUser *User, err error) {
 	key := "user:" + username
 	userExists := pipe.Exists(key)
 	userData := pipe.Get(key)
+	userScore := pipe.ZScore(scoreboardKey, username)
 	if _, err = pipe.Exec(); err != nil {
 		return
 	}
@@ -99,17 +105,17 @@ func (dc *DataController) GetUser(username string) (fullUser *User, err error) {
 	if err = decoder.Decode(fullUser); err != nil {
 		return
 	}
+	fullUser.Score = userScore.Val()
+
 	return
 }
 
-func (dc *DataController) GetUserProfile(form *GetUserForm) (profile *UserProfile, err error) {
+func (dc *DataController) GetUserProfile(form *GetUserForm) (profile *User, err error) {
 	user, err := dc.GetUser(form.Username)
 	if err != nil {
 		return
 	}
-	profile = new(UserProfile)
-	profile.Username = user.Username
-	profile.Name = user.Name
+	user.Password = ""
 	return
 }
 
@@ -240,7 +246,6 @@ func (dc *DataController) SubmitTask(getForm *GetTaskForm, submitForm *TaskSubmi
 
 func (dc *DataController) GetUserRankings(form *UserRankingForm) (result *UserRanking, err error) {
 	pipe := dc.TxPipeline()
-	scoreboardKey := "scoreboard"
 	cntCmd := pipe.ZCard(scoreboardKey)
 	dataCmd := pipe.ZRangeWithScores(scoreboardKey, form.Offset, form.Offset+form.Limit-1)
 	if _, err = pipe.Exec(); err != nil {
