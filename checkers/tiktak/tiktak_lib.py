@@ -82,25 +82,18 @@ class CheckMachine:
         check_response(r, 'Failed to get subtitles content')
         return r.text
 
-    def check_video(self, video_path, sess=None):
+    def check_video(self, video_path, sess=None, n=1000):
         if sess is None:
             sess = get_initialized_session()
-        r = sess.get(f'{self.url}{video_path}', headers={'Range': 'bytes=0-99'})
+        r = sess.get(f'{self.url}{video_path}', headers={'Range': 'bytes=0-{}'.format(n - 1)})
         check_response(r, 'Failed to get video content')
-        if int(r.headers['Content-Length']) < 100 or 'webm' not in r.text:
+        if int(r.headers['Content-Length']) < n:
             cquit(status.Status.MUMBLE, 'Failed to get video content', f'Error on {r.url}: {r.status_code}')
-        return r.text
+        return r.content
 
     def get_access(self, sess, v_id, token):
         r = sess.post(f'{self.url}/access', data={'videoID': v_id, 'token': token})
         check_response(r, "Failed to get access using private key")
         return r.url
 
-
 # print(sp.find_all("div", {"class": "ui secondary segment"}))
-
-
-if __name__ == '__main__':
-    get_text_webm(
-        "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi" + "=",
-        "test")
