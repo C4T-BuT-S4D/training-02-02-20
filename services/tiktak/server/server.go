@@ -122,20 +122,20 @@ func (s *Server) handleCreate(c echo.Context) error {
 
 	ppath := s.previewPath(v.ID)
 
-	ctx, cancel := context.WithTimeout(ctx, time.Second*2)
+	ctx, cancel := context.WithTimeout(ctx, time.Second*7)
 	defer cancel()
 
 	err = video.GeneratePreview(ctx, s.vs.Path(link), ppath)
 	if err != nil {
 		return c.Render(http.StatusUnprocessableEntity, "create", ErrorResponse{"failed to generate preview: " + err.Error()})
 	}
+	if err := s.storeVtt(ctx, v, subt); err != nil {
+		return c.Render(http.StatusUnprocessableEntity, "create", ErrorResponse{err.Error()})
+	}
 	if v.Private {
 		if err = video.Blur(ppath, s.privatePreviewPath(v.ID)); err != nil {
 			return c.Render(http.StatusUnprocessableEntity, "create", ErrorResponse{"failed to blur preview: " + err.Error()})
 		}
-	}
-	if err := s.storeVtt(ctx, v, subt); err != nil {
-		return c.Render(http.StatusUnprocessableEntity, "create", ErrorResponse{err.Error()})
 	}
 	return c.Redirect(http.StatusFound, fmt.Sprintf("/watch/%d", v.ID))
 }

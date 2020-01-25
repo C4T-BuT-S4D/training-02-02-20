@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-func GetDuration(ctx context.Context, inp string) (res float64, err error) {
+func getDuration(ctx context.Context, inp string) (res float64, err error) {
 
 	args := []string{"-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", inp}
 
@@ -23,6 +23,20 @@ func GetDuration(ctx context.Context, inp string) (res float64, err error) {
 
 	_, err = fmt.Fscan(bytes.NewReader(out), &res)
 	return
+}
+
+func GetDuration(ctx context.Context, inp string) (res float64, err error) {
+	select {
+	case semaphore <- struct{}{}:
+		ctx, cancel := context.WithTimeout(ctx, ProcessingDeadline)
+		defer func() {
+			cancel()
+			<-semaphore
+		}()
+		return getDuration(ctx, inp)
+	case <-ctx.Done():
+		return 0, ctx.Err()
+	}
 }
 
 func GenerateVtt(ctx context.Context, inp string, s string) ([]string, error) {
