@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+import hashlib
 import sys
 import tempfile
 import random
@@ -38,6 +38,17 @@ def get_random_description():
     return ' '.join(ans)
 
 
+def get_hash(b):
+    return hashlib.sha1(b).hexdigest()
+
+
+def get_file_hash(path, n=1000):
+    f = open(path, 'rb')
+    hsh = get_hash(f.read(n))
+    f.close()
+    return hsh
+
+
 def check(host):
     cm = CheckMachine(host)
     u, p, _ = cm.register_user()
@@ -45,6 +56,7 @@ def check(host):
     description = get_random_description()
     caption = get_random_caption()
     webm = get_random_webm()
+    webm_hash = get_file_hash(webm)
     v_id, w_link = cm.upload_video(sess, description, caption, webm, private=False)
     info = cm.get_my_video_info(sess)
     cm.check_preview(info[v_id]['preview_path'], sess)
@@ -54,12 +66,14 @@ def check(host):
     w_info = cm.get_watch_info(w_link, sess)
 
     if description not in w_info['desc']:
-        cquit(status.Status.CORRUPT, "Failed to get video description")
+        cquit(status.Status.MUMBLE, "Failed to get video description")
     track_content = cm.get_track_content(w_info['track'], sess)
     if caption.split()[0] not in track_content:
-        cquit(status.Status.CORRUPT, "Failed to get subtitles content")
+        cquit(status.Status.MUMBLE, "Failed to get subtitles content")
 
-    cm.check_video(w_info['video'], sess)
+    video_content = cm.check_video(w_info['video'])
+    if get_hash(video_content) != webm_hash:
+        cquit(status.Status.MUMBLE, "Failed to get video content")
 
 
 def put(host, _flag_id, flag, _vuln):
@@ -79,19 +93,22 @@ def put(host, _flag_id, flag, _vuln):
     with tempfile.TemporaryDirectory() as tmp_dir_name:
         o_path = tmp_dir_name + '/video'
         webm_path = imagegen.get_text_webm(video_content, o_path)
+        webm_hash = get_file_hash(webm_path)
         v_id, w_link = cm.upload_video(sess, description, caption, webm_path, private=True)
+
     v_info = cm.get_my_video_info(sess)
 
     cm.check_preview(v_info[v_id]['preview_path'], sess)
     token = v_info[v_id].get('token')
     if token is None:
         cquit(Status.MUMBLE, "Can't get token for private video", v_info)
-    return f'{description}:{caption.split()[0]}:{v_id}:{token}'
-    cquit(Status.OK, f'{description}:{caption}:{v_id}:{token}')
+
+    flag_id_s = f'{description}:{caption.split()[0]}:{webm_hash}:{v_id}:{token}'
+    cquit(Status.OK, flag_id_s)
 
 
 def get(host, flag_id, flag, _vuln):
-    description, caption, v_id, token = flag_id.strip().split(":")
+    description, caption, webm_hash, v_id, token = flag_id.strip().split(":")
     cm = CheckMachine(host)
 
     _, _, sess = cm.register_user()
@@ -108,12 +125,15 @@ def get(host, flag_id, flag, _vuln):
     if caption not in track_content:
         cquit(status.Status.CORRUPT, "Failed to get subtitles content")
 
-    cm.check_video(w_info['video'], sess)
+    video_content = cm.check_video(w_info['video'], sess)
+    if get_hash(video_content) != webm_hash:
+        cquit(status.Status.CORRUPT, "Failed to get video content")
 
 
 if __name__ == '__main__':
     action, *args = sys.argv[1:]
 try:
+
     if action == "check":
         host, = args
         check(host)
