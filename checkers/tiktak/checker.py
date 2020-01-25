@@ -56,6 +56,9 @@ def check(host):
     description = get_random_description()
     caption = get_random_caption()
     webm = get_random_webm()
+    if webm.endswith("gocr.webm"):
+        description = "Who the fuck is your gocr"
+        caption = '\n'.join(["Да кто такой", "этот ваш", "gocr нахуй"])
     webm_hash = get_file_hash(webm)
     v_id, w_link = cm.upload_video(sess, description, caption, webm, private=False)
     info = cm.get_my_video_info(sess)
