@@ -26,6 +26,7 @@ func (ks *KTFServer) registerRoutes() {
 	ks.Engine.RedirectTrailingSlash = true
 
 	api := ks.Engine.Group("/api")
+	api.OPTIONS("/*kek", ks.statusHandler())
 	api.GET("/", ks.statusHandler())
 	api.GET("/ping/", ks.statusHandler())
 	api.GET("/status/", ks.statusHandler())

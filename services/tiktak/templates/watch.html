@@ -1,0 +1,21 @@
+{{define "watch"}}
+    {{template "header"}}
+    <div class="ui text container">
+
+        <video controls width="640">
+            <source src="/{{ .VideoPath}}" type="video/webm"/>
+            <track label="Text" kind="subtitles" srclang="en" src="{{ .VttPath }}" default>
+            <p>Video is not supported in your browser</p>
+        </video>
+
+        <div class="ui one column grid">
+            <div class="column">
+                <div class="ui message">
+                    <h4 class="ui header">{{ .Description }}</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{template "footer"}}
+{{ end }}

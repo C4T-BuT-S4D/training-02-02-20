@@ -1,0 +1,26 @@
+{{define "access"}}
+    {{template "header" .Error}}
+    <div class="ui text container">
+        <h1 class="ui header">Access denied</h1>
+        <div class="ui one column grid">
+            <div class="column">
+                <div class="ui message">
+                    <h4 class="ui header">This video is private. You can get access to it using author's token.</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+    <br>
+    <div class="ui text container">
+        <form class="ui form" method="post" action="/access" enctype="multipart/form-data">
+            <div class="field">
+                <label>Token:</label>
+                <input required type="text" style="width: 30%;" name="token" placeholder="aAbBcC">
+            </div>
+            <input name="videoID" type="hidden" value="{{ .ID}}">
+            <button class="ui button" type="submit">Submit</button>
+        </form>
+    </div>
+
+    {{template "footer"}}
+{{ end }}

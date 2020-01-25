@@ -6,7 +6,9 @@ import (
 )
 
 func withCORSAllowAll(c *gin.Context) {
-	c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+	c.Writer.Header().Set("Access-Control-Allow-Origin", "http://127.0.0.1:8080")
+	c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+	c.Writer.Header().Set("Access-Control-Allow-Headers", "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Referer")
 }
 
 func (ks *KTFServer) withCurrentUser() gin.HandlerFunc {
