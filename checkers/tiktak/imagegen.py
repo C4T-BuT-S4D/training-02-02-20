@@ -2,20 +2,24 @@ import subprocess
 
 from PIL import Image, ImageDraw, ImageFont
 
-template_path = 'template.png'
 
+font_name = 'ocr-aregular.ttf'
+font_size = 37
 
 def get_text_image(message, output_path):
-    img = Image.open(template_path)
+
+    font = ImageFont.truetype(font_name, font_size)
+
+    (w, h) = font.getsize(message)
+
+    img = Image.new('RGB', (w + 20, h + 200), (255, 255, 255))
     draw = ImageDraw.Draw(img)
 
-    font = ImageFont.truetype("micross.ttf", 28)
-
-    (x, y) = (10, 10)
+    (x, y) = (10, 100)
 
     color = 'rgb(0, 0, 0)'
 
-    draw.text((x, y), message, fill=color, font=font, spacing=100)
+    draw.text((x, y), message, fill=color, font=font)
 
     output_path = output_path + ".png"
 
@@ -26,5 +30,5 @@ def get_text_image(message, output_path):
 def get_text_webm(message, output_path):
     png_path = get_text_image(message, output_path)
     webm_path = output_path + ".webm"
-    subprocess.check_output(["ffmpeg", "-y", "-framerate", "0.5", "-i", png_path, "-vf", "format=yuv420p", webm_path])
+    subprocess.run(["ffmpeg", "-y", "-framerate", "0.5", "-i", png_path, "-vf", "format=yuv420p", webm_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     return webm_path
