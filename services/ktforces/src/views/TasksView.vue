@@ -121,14 +121,9 @@ export default {
                     buf[i] = data[i - dataAddr];
                 }
 
-                console.log(data);
-                console.log(key);
-
                 window.wasmdecrypt.exports.encrypt();
 
                 let resultAddr = window.wasmdecrypt.exports.resultAddr();
-
-                console.log(buf.slice(resultAddr, resultAddr + data.length));
 
                 return buf.slice(resultAddr, resultAddr + data.length);
             } catch {
