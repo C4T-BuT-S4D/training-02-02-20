@@ -48,5 +48,10 @@ func encrypt() {
 	ctr.XORKeyStream(result, data)
 }
 
+//go:export decrypt
+func decrypt() {
+	encrypt()
+}
+
 func main() {
 }
