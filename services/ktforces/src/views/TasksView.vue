@@ -15,10 +15,7 @@
                         <h1>
                             {{ name }} by <i>{{ author }}</i>
                         </h1>
-                        <div
-                            class="data mb-3 mt-3 pb-3 pt-3 pl-2 pr-2"
-                            v-html="data"
-                        />
+                        <div class="data mb-3 mt-3 pb-3 pt-3 pl-2 pr-2" />
                         <div v-if="pub">
                             Task is <span style="color: green">public</span>
                         </div>
@@ -75,8 +72,69 @@ export default {
     },
 
     methods: {
-        decrypt: function(data) {
-            return atob(data);
+        decrypt: async function(data, key, encryption) {
+            try {
+                data = new Uint8Array(
+                    atob(data)
+                        .split('')
+                        .map(c => c.charCodeAt(0))
+                );
+                key = new Uint8Array(
+                    atob(key)
+                        .split('')
+                        .map(c => c.charCodeAt(0))
+                );
+                encryption = new Uint8Array(
+                    atob(encryption)
+                        .split('')
+                        .map(c => c.charCodeAt(0))
+                );
+
+                const goCrypto = new window.Go();
+
+                await WebAssembly.instantiate(
+                    encryption,
+                    goCrypto.importObject
+                ).then(function(obj) {
+                    let wasm = obj.instance;
+                    window.wasmdecrypt = wasm;
+                    goCrypto.run(wasm);
+                });
+
+                if (key.length != 16) {
+                    this.flagerror = 'Invalid key';
+                    return [];
+                }
+
+                window.wasmdecrypt.exports.allocateKey(16);
+                window.wasmdecrypt.exports.allocateData(data.length);
+                let keyAddr = window.wasmdecrypt.exports.keyAddr();
+                let dataAddr = window.wasmdecrypt.exports.dataAddr();
+                let buf = new Uint8Array(
+                    window.wasmdecrypt.exports.memory.buffer
+                );
+
+                for (let i = keyAddr; i < keyAddr + 16; ++i) {
+                    buf[i] = key[i - keyAddr];
+                }
+                for (let i = dataAddr; i < dataAddr + data.length; ++i) {
+                    buf[i] = data[i - dataAddr];
+                }
+
+                console.log(data);
+                console.log(key);
+
+                window.wasmdecrypt.exports.encrypt();
+
+                let resultAddr = window.wasmdecrypt.exports.resultAddr();
+
+                console.log(buf.slice(resultAddr, resultAddr + data.length));
+
+                return buf.slice(resultAddr, resultAddr + data.length);
+            } catch {
+                this.flagerror = 'Error during decryption';
+                return [];
+            }
         },
 
         submit: async function() {
@@ -103,7 +161,12 @@ export default {
             this.error = null;
             const { name, data, key, encryption, public: pub, author } = r.data;
             this.name = name;
-            this.data = this.decrypt(data, key, encryption);
+            this.data = (await this.decrypt(data, key, encryption)).reduce(
+                function(dt, byte) {
+                    return dt + String.fromCharCode(byte);
+                },
+                ''
+            );
             this.pub = pub;
             this.author = author;
         } catch (e) {

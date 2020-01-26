@@ -63,13 +63,34 @@ export default {
         },
 
         generateId: function(len) {
-            var arr = new Uint8Array((len || 40) / 2);
+            let arr = new Uint8Array(len);
             window.crypto.getRandomValues(arr);
-            return Array.from(arr, this.dec2hex).join('');
+            return arr;
         },
 
-        encrypt: function(data) {
-            return data;
+        encrypt: function(data, key) {
+            if (key.length != 16) {
+                return '';
+            }
+
+            window.wasmcrypto.exports.allocateKey(16);
+            window.wasmcrypto.exports.allocateData(data.length);
+            let keyAddr = window.wasmcrypto.exports.keyAddr();
+            let dataAddr = window.wasmcrypto.exports.dataAddr();
+            let buf = new Uint8Array(window.wasmcrypto.exports.memory.buffer);
+
+            for (let i = keyAddr; i < keyAddr + 16; ++i) {
+                buf[i] = key[i - keyAddr];
+            }
+            for (let i = dataAddr; i < dataAddr + data.length; ++i) {
+                buf[i] = data[i - dataAddr];
+            }
+
+            window.wasmcrypto.exports.encrypt();
+
+            let resultAddr = window.wasmcrypto.exports.resultAddr();
+
+            return buf.slice(resultAddr, resultAddr + data.length);
         },
 
         submit: async function() {
@@ -83,22 +104,16 @@ export default {
                 this.error = e.response.data.error;
                 return;
             }
-
             this.captcha = true;
-
             await this.$forceNextTick();
-
-            window.wasm.exports.allocateNonce(nonce.length);
-            let buf = new Uint8Array(window.wasm.exports.memory.buffer);
-            let nonceAddr = window.wasm.exports.nonceAddr();
+            window.wasmcaptcha.exports.allocateNonce(nonce.length);
+            let buf = new Uint8Array(window.wasmcaptcha.exports.memory.buffer);
+            let nonceAddr = window.wasmcaptcha.exports.nonceAddr();
             for (let i = nonceAddr; i < nonceAddr + nonce.length; ++i) {
                 buf[i] = nonce.charCodeAt(i - nonceAddr);
             }
-
-            let captcha = window.wasm.exports.captcha();
-
+            let captcha = window.wasmcaptcha.exports.captcha();
             this.captcha = false;
-
             const form = {
                 task: {},
                 pow: {
@@ -107,18 +122,28 @@ export default {
                     answer: captcha.toString(),
                 },
             };
-
-            const enckey = this.generateId();
-            const data = this.encrypt(this.description, key);
+            const enckey = this.generateId(16);
+            const data = JSON.stringify({ description: this.description });
             form.task = {
                 name: this.name,
-                data: btoa(data),
-                key: btoa(enckey),
+                data: btoa(
+                    this.encrypt(data, enckey).reduce(function(data, byte) {
+                        return data + String.fromCharCode(byte);
+                    }, '')
+                ),
+                key: btoa(
+                    enckey.reduce(function(data, byte) {
+                        return data + String.fromCharCode(byte);
+                    }, '')
+                ),
                 flag: this.flag,
-                encryption: btoa('TODO'),
+                encryption: btoa(
+                    window.encryptwasm.reduce(function(data, byte) {
+                        return data + String.fromCharCode(byte);
+                    }, '')
+                ),
                 public: this.pub,
             };
-
             try {
                 const r = await this.$http.post('/tasks/', form);
                 this.error = null;
