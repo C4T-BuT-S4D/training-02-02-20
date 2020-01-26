@@ -83,7 +83,7 @@ export default {
                 buf[i] = key[i - keyAddr];
             }
             for (let i = dataAddr; i < dataAddr + data.length; ++i) {
-                buf[i] = data[i - dataAddr];
+                buf[i] = data.charCodeAt(i - dataAddr);
             }
 
             window.wasmcrypto.exports.encrypt();
