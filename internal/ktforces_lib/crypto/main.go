@@ -50,7 +50,17 @@ func encrypt() {
 
 //go:export decrypt
 func decrypt() {
-	encrypt()
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		panic(err)
+	}
+
+	iv := []byte("1337133713371377")
+
+	ctr := NewCTR(block, iv)
+
+	result = make([]byte, len(data))
+	ctr.XORKeyStream(result, data)
 }
 
 func main() {
