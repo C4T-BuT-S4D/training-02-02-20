@@ -20,10 +20,10 @@ type Task struct {
 	ID         string `json:"id" binding:"isdefault"`
 	Name       string `json:"name" binding:"required"`
 	Data       string `json:"data" binding:"required,base64"`
-	Key        string `json:"key" binding:"required,base64"`
+	Key        string `json:"key,omitempty" binding:"required,base64"`
 	Encryption string `json:"encryption" binding:"required,base64"`
 	Public     bool   `json:"public"`
-	Flag       string `json:"flag"`
+	Flag       string `json:"flag,omitempty"`
 	Author     string `json:"author" binding:"isdefault"`
 }
 
