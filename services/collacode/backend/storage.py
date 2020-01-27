@@ -1,5 +1,7 @@
-import ujson
+import uuid
+
 import aioredis
+import ujson
 
 import exceptions
 
@@ -33,11 +35,16 @@ async def add_user(redis, username, password):
         'password': password,
     }
     tr.set(f'user:{username}', ujson.dumps(data))
+    tr.lpush('users', username)
     await tr.execute()
 
     exists = await exists
     if exists:
         raise exceptions.UserExistsException
+
+
+async def get_users_list(redis, limit, offset):
+    return await redis.lrange('users', offset, offset + limit - 1)
 
 
 async def get_user(redis, username):
@@ -53,6 +60,29 @@ async def get_user(redis, username):
         return user
 
 
+async def get_users_collabs(redis, username):
+    return await redis.smembers(f'user:{username}:collabs')
+
+
+async def get_current_user(redis, request):
+    session = request.cookies['session']
+    user_data = await redis.get(session)
+    return ujson.loads(user_data)
+
+
 async def set_session(redis, session, user):
     data = ujson.dumps(user)
     await redis.set(session, data)
+
+
+async def add_collab(redis, request):
+    token = str(uuid.uuid4())
+
+    f = request.json.get('format', 'json')
+    user = await get_current_user(redis, request)
+    username = user['username']
+
+    await redis.set(f"code:{token}:format", f)
+    await redis.sadd(f'user:{username}:collabs', token)
+
+    return token

@@ -5,10 +5,20 @@ services:
     build:
       context: .
       dockerfile: docker_config/backend/Dockerfile
-    ports:
-    - "9997:9997"
     restart: on-failure
 
-  redis:
-    image: redis:5.0.3-alpine
+  nginx:
+    image: nginx:1.15.9-alpine
+    ports:
+      - "9997:80"
+    volumes:
+      - ./docker_config/nginx/conf:/etc/nginx/conf.d
+      - ./docker_config/nginx/nginx.proxy_params:/etc/nginx/proxy_params
     restart: on-failure
+
+
+  redis:
+    image: redis:5.0.5-alpine
+    restart: on-failure
+    sysctls:
+      net.core.somaxconn: 1024

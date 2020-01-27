@@ -1,17 +1,15 @@
 import asyncio
 import secrets
-import uuid
-import ujson
-
-from sanic import Sanic
-from sanic.response import json
-from sanic.exceptions import NotFound
-from sanic.websocket import WebSocketProtocol
-from aioredis.pubsub import Receiver
 from functools import wraps
 
-import storage
+from aioredis.pubsub import Receiver
+from sanic import Sanic
+from sanic.exceptions import NotFound
+from sanic.response import json
+from sanic.websocket import WebSocketProtocol
+
 import exceptions
+import storage
 
 app = Sanic('collacode')
 
@@ -71,7 +69,7 @@ async def get_code_websocket_handler(token):
     return handler
 
 
-@app.route('/register/', methods=['POST'])
+@app.route('/api/register/', methods=['POST'])
 async def register(request):
     username = request.json.get('username')
     password = request.json.get('password')
@@ -90,7 +88,7 @@ async def register(request):
     return json({'status': 'ok'})
 
 
-@app.route('/login/', methods=['POST'])
+@app.route('/api/login/', methods=['POST'])
 async def login(request):
     username = request.json.get('username')
     password = request.json.get('password')
@@ -114,42 +112,74 @@ async def login(request):
     return response
 
 
-@app.route('/logout/')
+@app.route('/api/logout/')
 async def logout(_request):
     response = json({'status': 'ok'})
     del response.cookies['session']
     return response
 
 
-@app.route('/me/')
+@app.route('/api/me/')
 @login_required
 async def me(request):
     loop = asyncio.get_event_loop()
     redis = await storage.get_async_redis_pool(loop)
-    session = request.cookies['session']
-    user_data = await redis.get(session)
-    return json(ujson.loads(user_data))
+
+    user = await storage.get_current_user(redis, request)
+    return json(user)
 
 
-@app.route('/new_collab/')
+@app.route('/api/my_collabs/')
 @login_required
-async def new_collab(_request):
-    token = str(uuid.uuid4())
+async def list_my_collabs(request):
+    loop = asyncio.get_event_loop()
+    redis = await storage.get_async_redis_pool(loop)
+
+    user = await storage.get_current_user(redis, request)
+    collabs = await storage.get_users_collabs(redis, user['username'])
+    return json(collabs)
+
+
+@app.route('/api/users/')
+async def list_users(request):
+    loop = asyncio.get_event_loop()
+    redis = await storage.get_async_redis_pool(loop)
+    limit = request.args.get('limit', 10)
+    offset = request.args.get('offset', 0)
+    try:
+        limit = int(limit)
+        offset = int(offset)
+    except Exception as e:
+        return json({'error': str(e)}, status=400)
+
+    users = await storage.get_users_list(redis, limit, offset)
+    return json(users)
+
+
+@app.route('/api/new_collab/', methods=['POST'])
+@login_required
+async def new_collab(request):
+    loop = asyncio.get_event_loop()
+    redis = await storage.get_async_redis_pool(loop)
+
+    token = await storage.add_collab(redis, request)
+
     handler = await get_code_websocket_handler(token)
-    app.add_websocket_route(handler, f'/code/{token}')
+    app.add_websocket_route(handler, f'/api/code/{token}')
+
     return json({'token': token})
 
 
 # noinspection PyUnresolvedReferences
-@app.route('/get_collab/<token>/')
-@login_required
+@app.route('/api/get_collab/<token>/')
 async def get_collab(_request, token):
     loop = asyncio.get_event_loop()
     redis = await storage.get_async_redis_pool(loop)
 
     data = await redis.get(token)
-    return json({'data': data})
+    f = await redis.get(f'code:{token}:format')
+    return json({'data': data, 'format': f})
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=9997, protocol=WebSocketProtocol)
+    app.run(host='0.0.0.0', port=8000, protocol=WebSocketProtocol)
