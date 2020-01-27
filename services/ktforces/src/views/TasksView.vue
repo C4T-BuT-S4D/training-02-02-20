@@ -13,9 +13,9 @@
                 <div v-if="error === null">
                     <v-container>
                         <h1>
-                            {{ name }} by <i>{{ author }}</i>
+                            {{ name }} by <i @click="openUser(author)" class="author">{{ author }}</i>
                         </h1>
-                        <div class="data mb-3 mt-3 pb-3 pt-3 pl-2 pr-2" />
+                        <div class="data mb-3 mt-3 pb-3 pt-3 pl-2 pr-2" v-html="data" />
                         <div v-if="pub">
                             Task is <span style="color: green">public</span>
                         </div>
@@ -72,6 +72,11 @@ export default {
     },
 
     methods: {
+        openUser: function(username) {
+            this.$router
+                .push({ name: 'profile', params: { username } })
+                .catch(() => {});
+        },
         decrypt: async function(data, key, encryption) {
             try {
                 data = new Uint8Array(
@@ -156,12 +161,12 @@ export default {
             this.error = null;
             const { name, data, key, encryption, public: pub, author } = r.data;
             this.name = name;
-            this.data = (await this.decrypt(data, key, encryption)).reduce(
+            this.data = JSON.parse((await this.decrypt(data, key, encryption)).reduce(
                 function(dt, byte) {
                     return dt + String.fromCharCode(byte);
                 },
                 ''
-            );
+            )).description;
             this.pub = pub;
             this.author = author;
         } catch (e) {
@@ -177,5 +182,9 @@ export default {
     background-color: rgba($color: #222222, $alpha: 0.5);
     border-radius: 20px;
     white-space: pre-wrap;
+}
+
+.author {
+    cursor: pointer;
 }
 </style>
