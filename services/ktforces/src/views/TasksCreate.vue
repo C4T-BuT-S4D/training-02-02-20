@@ -7,22 +7,59 @@
                     <v-text-field
                         v-model="name"
                         label="Name"
+                        id="t-name"
                         required
                         outlined
                     />
                     <v-textarea
                         v-model="description"
                         label="Description"
+                        id="t-desc"
                         required
                         outlined
                     />
                     <v-text-field
                         v-model="flag"
                         label="Flag"
+                        id="t-flag"
                         required
                         outlined
                     />
-                    <v-checkbox v-model="pub" label="public" />
+                    <v-checkbox v-model="pub" label="public" id="t-pub" />
+                    <v-checkbox
+                        v-model="manualcap"
+                        label="manual captcha"
+                        id="t-cap-c"
+                    />
+                    <v-btn
+                        class="ml-3 mb-3"
+                        color="blue"
+                        @click="capreq"
+                        v-if="manualcap"
+                        id="t-cap-btn"
+                        >Request captcha</v-btn
+                    >
+                    <v-text-field
+                        v-model="capkey"
+                        label="Captcha key"
+                        id="t-cap-key"
+                        outlined
+                        v-if="manualcap"
+                    />
+                    <v-text-field
+                        v-model="capnonce"
+                        label="Capctha nonce"
+                        id="t-cap-nonce"
+                        outlined
+                        v-if="manualcap"
+                    />
+                    <v-text-field
+                        v-model="cap"
+                        label="Captcha"
+                        id="t-cap-cap"
+                        outlined
+                        v-if="manualcap"
+                    />
                     <span
                         class="red"
                         v-if="error !== null"
@@ -31,7 +68,9 @@
                     </span>
                 </v-container>
             </v-form>
-            <v-btn class="ml-3 mb-3" color="blue" @click="submit">Create</v-btn>
+            <v-btn class="ml-3 mb-3" color="blue" @click="submit" id="t-create"
+                >Create</v-btn
+            >
             <div v-if="captcha">
                 <span class="mb-3 ml-3">Captcha: </span>
                 <v-progress-circular
@@ -54,6 +93,10 @@ export default {
             flag: null,
             pub: false,
             captcha: false,
+            manualcap: false,
+            cap: null,
+            capkey: null,
+            capnonce: null,
         };
     },
 
@@ -93,33 +136,52 @@ export default {
             return buf.slice(resultAddr, resultAddr + data.length);
         },
 
-        submit: async function() {
-            let key, nonce;
+        capreq: async function() {
             try {
                 const r = await this.$http.get('/captcha/');
-                key = r.data.key;
-                nonce = r.data.nonce;
+                this.capkey = r.data.key;
+                this.capnonce = r.data.nonce;
                 this.error = null;
             } catch (e) {
                 this.error = e.response.data.error;
                 return;
             }
-            this.captcha = true;
-            await this.$forceNextTick();
-            window.wasmcaptcha.exports.allocateNonce(nonce.length);
-            let buf = new Uint8Array(window.wasmcaptcha.exports.memory.buffer);
-            let nonceAddr = window.wasmcaptcha.exports.nonceAddr();
-            for (let i = nonceAddr; i < nonceAddr + nonce.length; ++i) {
-                buf[i] = nonce.charCodeAt(i - nonceAddr);
+        },
+
+        submit: async function() {
+            if (!this.manualcap) {
+                try {
+                    const r = await this.$http.get('/captcha/');
+                    this.capkey = r.data.key;
+                    this.capnonce = r.data.nonce;
+                    this.error = null;
+                } catch (e) {
+                    this.error = e.response.data.error;
+                    return;
+                }
+                this.captcha = true;
+                await this.$forceNextTick();
+                window.wasmcaptcha.exports.allocateNonce(this.capnonce.length);
+                let buf = new Uint8Array(
+                    window.wasmcaptcha.exports.memory.buffer
+                );
+                let nonceAddr = window.wasmcaptcha.exports.nonceAddr();
+                for (
+                    let i = nonceAddr;
+                    i < nonceAddr + this.capnonce.length;
+                    ++i
+                ) {
+                    buf[i] = this.capnonce.charCodeAt(i - nonceAddr);
+                }
+                this.cap = window.wasmcaptcha.exports.captcha();
+                this.captcha = false;
             }
-            let captcha = window.wasmcaptcha.exports.captcha();
-            this.captcha = false;
             const form = {
                 task: {},
                 pow: {
-                    key: key,
-                    nonce: nonce,
-                    answer: captcha.toString(),
+                    key: this.capkey,
+                    nonce: this.capnonce,
+                    answer: this.cap.toString(),
                 },
             };
             const enckey = this.generateId(16);

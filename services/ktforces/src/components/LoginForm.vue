@@ -7,12 +7,14 @@
                     <v-text-field
                         v-model="username"
                         label="Username"
+                        id="fl-username"
                         required
                         outlined
                     />
                     <v-text-field
                         v-model="password"
                         label="Password"
+                        id="fl-password"
                         required
                         outlined
                         type="password"
@@ -33,7 +35,11 @@
                     @click="$emit('input', false)"
                     >Close</v-btn
                 >
-                <v-btn color="green darken-1" text @click="submit"
+                <v-btn
+                    color="green darken-1"
+                    text
+                    @click="submit"
+                    id="fl-submit"
                     >Submit</v-btn
                 >
             </v-card-actions>

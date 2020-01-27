@@ -5,13 +5,17 @@
         <me-form v-model="meForm" v-if="!isNull(user)" />
 
         <v-app-bar app clipped-left>
-            <v-app-bar-nav-icon @click="show = !show" />
+            <v-app-bar-nav-icon @click="show = !show" id="menu-btn" />
             <v-toolbar-title>KTForces</v-toolbar-title>
             <v-spacer></v-spacer>
-            <v-btn color="green" @click="loginForm = true" v-if="isNull(user)"
+            <v-btn
+                color="green"
+                @click="loginForm = true"
+                v-if="isNull(user)"
+                id="login-button"
                 >Login</v-btn
             >
-            <v-btn color="green" v-else @click="meForm = true">{{
+            <v-btn color="green" v-else @click="meForm = true" id="me-button">{{
                 user.username
             }}</v-btn>
             <v-btn
@@ -19,9 +23,15 @@
                 class="ml-3"
                 @click="registerForm = true"
                 v-if="isNull(user)"
+                id="register-button"
                 >Register</v-btn
             >
-            <v-btn class="ml-3" color="red" v-else @click="logout"
+            <v-btn
+                class="ml-3"
+                color="red"
+                v-else
+                @click="logout"
+                id="logout-button"
                 >Logout</v-btn
             >
         </v-app-bar>
@@ -31,6 +41,7 @@
                 <v-list-item
                     link
                     @click="$router.push({ name: 'index' }).catch(() => {})"
+                    id="menu-scoreboard"
                 >
                     <v-list-item-action>
                         <v-icon>mdi-align-vertical-bottom</v-icon>
@@ -42,6 +53,7 @@
                 <v-list-item
                     link
                     @click="$router.push({ name: 'tasks' }).catch(() => {})"
+                    id="menu-tasks"
                 >
                     <v-list-item-action>
                         <v-icon>mdi-cube-outline</v-icon>
@@ -73,7 +85,7 @@ import RegisterForm from '@/components/RegisterForm';
 import MeForm from '@/components/MeForm';
 
 import { mapState } from 'vuex';
-import { isNull } from '@/utils/types';
+import { isNull, isUndefined } from '@/utils/types';
 
 export default {
     data: () => ({
@@ -91,6 +103,9 @@ export default {
 
     created: async function() {
         this.$vuetify.theme.dark = true;
+        if (!isUndefined(this.$route.query.logop)) {
+            this.loginForm = true;
+        }
     },
 
     computed: mapState(['user']),
@@ -126,9 +141,18 @@ export default {
                                     params: this.$route.params,
                                 })
                             ),
+                            logop: true,
                         },
                     })
                     .catch(() => {});
+            }
+        },
+    },
+
+    watch: {
+        $route: async function() {
+            if (!isUndefined(this.$route.query.logop)) {
+                this.loginForm = true;
             }
         },
     },

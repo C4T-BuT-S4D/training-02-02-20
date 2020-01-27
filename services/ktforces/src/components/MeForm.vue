@@ -25,6 +25,7 @@
                     color="green darken-1"
                     text
                     @click="$emit('input', false)"
+                    id="me-close"
                     >Close</v-btn
                 >
             </v-card-actions>

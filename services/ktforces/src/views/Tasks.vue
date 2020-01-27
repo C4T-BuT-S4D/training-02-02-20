@@ -5,10 +5,11 @@
             @click="$router.push({ name: 'tasks_create' }).catch(() => {})"
             v-if="!isNull(user)"
             class="mb-3"
+            id="tasks-create"
             >Create</v-btn
         >
         <div v-if="requested">
-            <v-simple-table v-if="error === null">
+            <v-simple-table v-if="error === null" id="t-list">
                 <template v-slot:default>
                     <thead>
                         <tr>

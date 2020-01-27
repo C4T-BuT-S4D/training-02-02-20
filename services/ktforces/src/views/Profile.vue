@@ -10,7 +10,7 @@
                 >
                     {{ error }}
                 </div>
-                <div v-if="error === null">
+                <div v-if="error === null" id="user-view">
                     <v-container>
                         <div>Name: {{ name }}</div>
                         <div>Username: {{ username }}</div>

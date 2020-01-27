@@ -82,6 +82,7 @@ router.beforeEach(async (to, from, next) => {
                             params: to.params,
                         })
                     ),
+                    logop: true,
                 },
             });
         } else {

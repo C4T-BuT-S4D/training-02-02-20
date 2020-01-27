@@ -1,6 +1,6 @@
 FROM node:13.7-alpine
 
-MAINTAINER tg: @kekov
+MAINTAINER tg: @kekov & @pomo_mondreganto
 
 ADD package.json /app/package.json
 ADD yarn.lock /app/yarn.lock

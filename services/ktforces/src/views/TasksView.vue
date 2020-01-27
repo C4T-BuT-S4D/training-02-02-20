@@ -1,7 +1,9 @@
 <template>
     <v-col cols="12" md="12">
         <v-card>
-            <v-card-title>Task #{{ $route.params.idx }}</v-card-title>
+            <v-card-title id="tv-task"
+                >Task #{{ $route.params.idx }}</v-card-title
+            >
             <div v-if="requested">
                 <div
                     class="red"
@@ -13,9 +15,17 @@
                 <div v-if="error === null">
                     <v-container>
                         <h1>
-                            {{ name }} by <i @click="openUser(author)" class="author">{{ author }}</i>
+                            {{ name }} by
+                            <i @click="openUser(author)" class="author">{{
+                                author
+                            }}</i>
                         </h1>
-                        <div class="data mb-3 mt-3 pb-3 pt-3 pl-2 pr-2" v-html="data" />
+                        <h1 v-if="flagShow !== null">Flag: {{ flagShow }}</h1>
+                        <div
+                            class="data mb-3 mt-3 pb-3 pt-3 pl-2 pr-2"
+                            id="tv-data"
+                            v-html="data"
+                        />
                         <div v-if="pub">
                             Task is <span style="color: green">public</span>
                         </div>
@@ -26,6 +36,7 @@
                             <v-text-field
                                 v-model="flag"
                                 label="Flag"
+                                id="tv-flag"
                                 required
                                 outlined
                                 class="mt-3"
@@ -34,6 +45,7 @@
                                 class="red"
                                 v-if="flagerror !== null"
                                 style="white-space: pre;"
+                                id="tv-flag-r"
                             >
                                 {{ flagerror }}
                             </div>
@@ -41,10 +53,15 @@
                                 class="green"
                                 v-if="flagok !== ''"
                                 style="white-space: pre;"
+                                id="tv-flag-r"
                             >
                                 {{ flagok }}
                             </div>
-                            <v-btn class="mt-3" color="blue" @click="submit"
+                            <v-btn
+                                class="mt-3"
+                                color="blue"
+                                @click="submit"
+                                id="tv-submit"
                                 >Submit</v-btn
                             >
                         </v-form>
@@ -68,6 +85,7 @@ export default {
             author: null,
             flagerror: null,
             flagok: '',
+            flagShow: null,
         };
     },
 
@@ -159,14 +177,30 @@ export default {
         try {
             const r = await this.$http.get(`/tasks/${this.$route.params.idx}/`);
             this.error = null;
-            const { name, data, key, encryption, public: pub, author } = r.data;
+            const {
+                name,
+                data,
+                key = null,
+                flag = null,
+                encryption,
+                public: pub,
+                author,
+            } = r.data;
             this.name = name;
-            this.data = JSON.parse((await this.decrypt(data, key, encryption)).reduce(
-                function(dt, byte) {
-                    return dt + String.fromCharCode(byte);
-                },
-                ''
-            )).description;
+            if (key !== null) {
+                this.data = JSON.parse(
+                    (await this.decrypt(data, key, encryption)).reduce(function(
+                        dt,
+                        byte
+                    ) {
+                        return dt + String.fromCharCode(byte);
+                    },
+                    '')
+                ).description;
+            } else {
+                this.data = 'Protected';
+            }
+            this.flagShow = flag;
             this.pub = pub;
             this.author = author;
         } catch (e) {
