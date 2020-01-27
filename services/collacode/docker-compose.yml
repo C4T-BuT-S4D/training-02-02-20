@@ -1,0 +1,14 @@
+version: '2.4'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: docker_config/backend/Dockerfile
+    ports:
+    - "9997:9997"
+    restart: on-failure
+
+  redis:
+    image: redis:5.0.3-alpine
+    restart: on-failure
