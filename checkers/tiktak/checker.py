@@ -86,6 +86,7 @@ def put(host, _flag_id, flag, _vuln):
     caption = get_random_caption()
     description = get_random_description()
     video_content = rnd_string(30)
+    _vuln = int(_vuln)
     if _vuln == 0:
         caption = flag
     elif _vuln == 1:
