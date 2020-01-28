@@ -18,7 +18,8 @@ rand_words = [
 
 
 def get_webms():
-    return [os.path.join(os.path.dirname(os.path.abspath(__file__)), 'webms/') + x for x in os.listdir('webms') if not x.startswith('.')]
+    webm_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'webms')
+    return [os.path.join(webm_dir, x) for x in os.listdir(webm_dir) if not x.startswith('.')]
 
 def get_random_webm():
     return random.choice(get_webms())
