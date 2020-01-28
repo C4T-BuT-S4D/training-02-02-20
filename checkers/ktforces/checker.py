@@ -23,6 +23,8 @@ def get_driver():
     chrome_options.add_argument(f'user-agent={rnd_useragent()}')
     chrome_options.add_argument('--headless')
     chrome_options.add_argument('--disable-gpu')
+    chrome_options.add_argument('--disable-extensions')
+    chrome_options.add_argument('--no-sandbox')
 
 
     while True:
