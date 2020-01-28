@@ -1,0 +1,7 @@
+beautifulsoup4
+checklib
+lorem
+pillow
+requests
+selenium
+websocket_client
