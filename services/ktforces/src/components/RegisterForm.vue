@@ -80,6 +80,9 @@ export default {
                 this.error = null;
                 this.$emit('input', false);
                 await this.$store.dispatch('UPDATE_USER');
+                this.username = null;
+                this.password = null;
+                this.name = null;
             } catch (e) {
                 this.error = e.response.data.error;
             }
