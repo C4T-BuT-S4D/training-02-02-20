@@ -22,7 +22,7 @@ def run(driver, ip):
     mch2 = CheckMachine(ip, driver)
 
     try:
-        wait_id(driver, "fl-close", "No close button after logout")
+        wait_id(driver, "fl-close", "logout")
     except NoSuchElementException:
         cquit(Status.MUMBLE, f"Can't find close button after logout")
     sleep(0.5)
@@ -31,11 +31,21 @@ def run(driver, ip):
     mch2.register()
     mch2.login()
 
+    try:
+        wait_id(driver, "me-button", "login")
+    except NoSuchElementException:
+        cquit(Status.MUMBLE, f"Can't login after task creation")
+
     mch2.open_task(mch1.task)
 
     mch2.logout()
 
-    driver.get(mch1.url)
+    try:
+        wait_id(driver, "fl-close", "logout")
+    except NoSuchElementException:
+        cquit(Status.MUMBLE, f"Can't find close button after logout")
+    sleep(0.5)
+    click(driver, "fl-close", "logout")
 
     mch1.login()
     mch1.check_user_profile(mch2.n, mch2.u)

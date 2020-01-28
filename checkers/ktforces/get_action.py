@@ -15,6 +15,11 @@ def run(driver, ip, flag_id, flag, vuln):
 
     mch1.login()
 
+    try:
+        wait_id(driver, "me-button", "login")
+    except NoSuchElementException:
+        cquit(Status.MUMBLE, f"login")
+
     if vuln == "1":
         mch1.check_profile(False)
     else:
