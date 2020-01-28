@@ -51,7 +51,7 @@ async def get_code_websocket_handler(token):
                 await ws.send({'error': 'code too long'})
                 continue
 
-            await redis.set(token, cur_data, expire=1800)
+            await redis.set(token, cur_data)
             await redis.publish(f'updates:{token}', data)
 
     async def out_handler(ws):

@@ -1,0 +1,3 @@
+websocket_client
+checklib
+requests
