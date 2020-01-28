@@ -20,6 +20,8 @@ def put(host, flag_id, flag, _vuln):
     collab_token = mch.new_collab(sess, f)
     collab_ws = mch.get_collab_ws(collab_token)
     mch.send_collab_data(collab_ws, data)
+    result = mch.recv_collab_data(collab_ws)
+    assert_eq(result, data.encode(), 'Invalid data returned from collab socket')
 
     cquit(Status.OK, f"{username}:{password}:{collab_token}")
 
