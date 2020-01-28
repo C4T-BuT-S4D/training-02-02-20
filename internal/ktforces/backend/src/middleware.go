@@ -6,7 +6,14 @@ import (
 )
 
 func withCORSAllowAll(c *gin.Context) {
-	c.Writer.Header().Set("Access-Control-Allow-Origin", "http://127.0.0.1:8080")
+	originList := c.Request.Header["Origin"]
+
+	if len(originList) == 0 {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "http://127.0.0.1:8080")
+	} else {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", originList[0])
+	}
+
 	c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
 	c.Writer.Header().Set("Access-Control-Allow-Headers", "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Referer")
 }
