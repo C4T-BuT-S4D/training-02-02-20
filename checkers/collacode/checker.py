@@ -2,10 +2,14 @@
 
 import sys
 
+from diff_match_patch import diff_match_patch
+
 from collacode_lib import *
 
 
 def put(host, flag_id, flag, _vuln):
+    dmp = diff_match_patch()
+
     mch = CheckMachine(host)
     username, password = mch.register()
     sess = mch.login(username, password)
@@ -17,11 +21,14 @@ def put(host, flag_id, flag, _vuln):
             'flag_id': flag_id,
         },
     )
+    patch = dmp.patch_make('', data)
+    diff = dmp.patch_toText(patch)
+
     collab_token = mch.new_collab(sess, f)
     collab_ws = mch.get_collab_ws(collab_token)
-    mch.send_collab_data(collab_ws, data)
+    mch.send_collab_data(collab_ws, diff)
     result = mch.recv_collab_data(collab_ws)
-    assert_eq(result, data.encode(), 'Invalid data returned from collab socket')
+    assert_eq(result, diff.encode(), 'Invalid data returned from collab socket')
 
     cquit(Status.OK, f"{username}:{password}:{collab_token}")
 
@@ -56,6 +63,8 @@ def get(host, flag_id, flag, _vuln):
 
 
 def check(host):
+    dmp = diff_match_patch()
+
     mch = CheckMachine(host)
     username, password = mch.register()
     users = mch.get_user_listing()
@@ -74,10 +83,16 @@ def check(host):
 
     blocks = [data[i:i + 100] for i in range(0, len(data), 100)]
 
+    cur_data = ''
     for block in blocks:
-        mch.send_collab_data(collab_ws, block)
+        patch = dmp.patch_make(cur_data, cur_data + block)
+        diff = dmp.patch_toText(patch)
+
+        mch.send_collab_data(collab_ws, diff)
         result = mch.recv_collab_data(collab_ws)
-        assert_eq(result, block.encode(), 'Invalid data returned from collab socket')
+        assert_eq(result, diff.encode(), 'Invalid data returned from collab socket')
+
+        cur_data += block
 
     full = mch.get_collab(sess, collab_token)
     assert_eq(full['format'], f, 'Invalid collab format')

@@ -3,7 +3,7 @@ import subprocess
 from PIL import Image, ImageDraw, ImageFont
 
 
-font_name = 'ocr-aregular.ttf'
+font_name = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ocr-aregular.ttf')
 font_size = 37
 
 def get_text_image(message, output_path):

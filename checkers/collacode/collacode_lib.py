@@ -66,9 +66,11 @@ class CheckMachine:
 
         check_response(r, 'Could not get user listing')
         data = get_json(r, 'Invalid response from user listing')
-        assert_eq(type(data), list, 'Invalid response from user listing')
+        assert_eq(type(data), dict, 'Invalid response from user listing')
+        assert_in('count', data, 'Invalid response from user listing')
+        assert_in('users', data, 'Invalid response from user listing')
 
-        return data
+        return data['users']
 
     def new_collab(self, sess, f):
         url = f'{self.url}/new_collab/'

@@ -1,3 +1,4 @@
 websocket_client
 checklib
 requests
+diff-match-patch

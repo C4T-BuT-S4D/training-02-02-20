@@ -77,6 +77,7 @@ def check(host):
     video_content = cm.check_video(w_info['video'])
     if get_hash(video_content) != webm_hash:
         cquit(status.Status.MUMBLE, "Failed to get video content")
+    cquit(Status.OK)
 
 
 def put(host, _flag_id, flag, _vuln):
@@ -132,6 +133,7 @@ def get(host, flag_id, flag, _vuln):
     video_content = cm.check_video(w_info['video'], sess)
     if get_hash(video_content) != webm_hash:
         cquit(status.Status.CORRUPT, "Failed to get video content")
+    cquit(Status.OK)
 
 
 if __name__ == '__main__':
@@ -150,7 +152,7 @@ try:
     else:
         cquit(Status.ERROR, 'System error', 'Unknown action: ' + action)
 
-    cquit(Status.ERROR)
+    cquit(Status.ERROR, 'System error', 'Action does not cquit!')
 except (requests.exceptions.ConnectionError, requests.exceptions.ConnectTimeout):
     cquit(Status.DOWN, 'Connection error')
 except SystemError as e:
