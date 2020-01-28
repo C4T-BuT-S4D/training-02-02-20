@@ -3,6 +3,7 @@ import secrets
 from functools import wraps
 
 from aioredis.pubsub import Receiver
+from diff_match_patch import diff_match_patch
 from sanic import Sanic
 from sanic.exceptions import NotFound
 from sanic.response import json
@@ -10,8 +11,6 @@ from sanic.websocket import WebSocketProtocol
 
 import exceptions
 import storage
-
-# from diff_match_patch import diff_match_patch
 
 app = Sanic('collacode')
 
@@ -54,16 +53,26 @@ async def get_code_websocket_handler(token):
     redis = await storage.get_async_redis_pool(loop)
 
     async def in_handler(ws):
+        dmp = diff_match_patch()
+
         while True:
             data = await ws.recv()
-            data = data.encode()
             cur_data = await redis.get(token) or b''
-            cur_data += data
-            if len(cur_data) > 32768:
+            cur_data = cur_data.decode()
+
+            try:
+                patch = dmp.patch_fromText(data)
+            except ValueError:
+                await ws.send({'error': 'invalid patch'})
+                continue
+
+            new_data, _ = dmp.patch_apply(patch, cur_data)
+
+            if len(new_data) > 32768:
                 await ws.send({'error': 'code too long'})
                 continue
 
-            await redis.set(token, cur_data)
+            await redis.set(token, new_data)
             await redis.publish(f'updates:{token}', data)
 
     async def out_handler(ws):
