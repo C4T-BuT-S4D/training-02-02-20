@@ -23,7 +23,9 @@ async def ignore_404s(request, _exception):
 def cors_allow_all(func):
     @wraps(func)
     async def wrapper(request, *args, **kwargs):
+        print('Called cors')
         response = await func(request, *args, **kwargs)
+        print('Cors got response')
         response.headers['Access-Control-Allow-Origin'] = '*'
         return response
 
@@ -33,6 +35,7 @@ def cors_allow_all(func):
 def login_required(f):
     @wraps(f)
     async def wrapper(request, *args, **kwargs):
+        print('called login')
         loop = asyncio.get_event_loop()
         redis = await storage.get_async_redis_pool(loop)
 
@@ -43,6 +46,7 @@ def login_required(f):
             response = await f(request, *args, **kwargs)
             return response
         else:
+            print('Returning login response')
             return json({'status': 'not_authorized'}, 403)
 
     return wrapper
@@ -210,6 +214,13 @@ async def get_collab(_request, token):
     data = await redis.get(token)
     f = await redis.get(f'code:{token}:format')
     return json({'data': data, 'format': f})
+
+
+# noinspection PyUnresolvedReferences
+@app.route('/api/<wtf>', methods=['OPTIONS'])
+@cors_allow_all
+async def options_handler(_request, _wtf):
+    return json({'status': 'ok'})
 
 
 if __name__ == '__main__':
