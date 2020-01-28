@@ -43,8 +43,18 @@ async def add_user(redis, username, password):
         raise exceptions.UserExistsException
 
 
-async def get_users_list(redis, limit, offset):
-    return await redis.lrange('users', offset, offset + limit - 1)
+async def get_users_listing(redis, limit, offset):
+    tr = redis.multi_exec()
+    cnt = tr.llen('users')
+    users = tr.lrange('users', offset, offset + limit - 1)
+    await tr.execute()
+
+    data = {
+        'count': await cnt,
+        'users': await users,
+    }
+
+    return data
 
 
 async def get_user(redis, username):

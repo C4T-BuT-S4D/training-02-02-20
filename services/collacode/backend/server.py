@@ -11,6 +11,8 @@ from sanic.websocket import WebSocketProtocol
 import exceptions
 import storage
 
+# from diff_match_patch import diff_match_patch
+
 app = Sanic('collacode')
 
 
@@ -152,7 +154,9 @@ async def list_users(request):
     except Exception as e:
         return json({'error': str(e)}, status=400)
 
-    users = await storage.get_users_list(redis, limit, offset)
+    limit = max(1, min(0, limit))
+
+    users = await storage.get_users_listing(redis, limit, offset)
     return json(users)
 
 
