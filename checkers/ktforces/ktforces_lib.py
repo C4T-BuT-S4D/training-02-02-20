@@ -62,6 +62,10 @@ class CheckMachine:
         assert_in(self.u, ps, f"Can't find username on {F}")
         assert_in(self.p, ps, f"Can't find password on {F}")
 
+        try:
+            wait_id(self.driver, "me-close", "No close button after profile view")
+        except NoSuchElementException:
+            cquit(Status.MUMBLE, f"Can't find close button after profile view")
         sleep(0.5)
         click(self.driver, "me-close", F)
 

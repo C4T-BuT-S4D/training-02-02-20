@@ -33,6 +33,7 @@
                     color="green darken-1"
                     text
                     @click="$emit('input', false)"
+                    id="fl-close"
                     >Close</v-btn
                 >
                 <v-btn
@@ -93,6 +94,9 @@ export default {
                         })
                         .catch(() => {});
                 }
+
+                this.username = null;
+                this.password = null;
             } catch (e) {
                 this.error = e.response.data.error;
             }

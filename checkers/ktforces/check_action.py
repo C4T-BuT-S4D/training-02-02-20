@@ -21,7 +21,12 @@ def run(driver, ip):
 
     mch2 = CheckMachine(ip, driver)
 
-    driver.get(mch2.url)
+    try:
+        wait_id(driver, "fl-close", "No close button after logout")
+    except NoSuchElementException:
+        cquit(Status.MUMBLE, f"Can't find close button after logout")
+    sleep(0.5)
+    click(driver, "fl-close", "logout")
 
     mch2.register()
     mch2.login()
