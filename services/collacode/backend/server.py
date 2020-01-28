@@ -8,11 +8,13 @@ from sanic import Sanic
 from sanic.exceptions import NotFound
 from sanic.response import json
 from sanic.websocket import WebSocketProtocol
+from sanic_cors import CORS
 
 import exceptions
 import storage
 
 app = Sanic('collacode')
+CORS(app, resources={r"/api/*": {"origins": "http://127.0.0.1:8080"}})
 
 
 @app.exception(NotFound)
@@ -20,22 +22,9 @@ async def ignore_404s(request, _exception):
     return json({"error": f'{request.path} not found'}, status=404)
 
 
-def cors_allow_all(func):
-    @wraps(func)
-    async def wrapper(request, *args, **kwargs):
-        print('Called cors')
-        response = await func(request, *args, **kwargs)
-        response.headers['Access-Control-Allow-Origin'] = 'http://127.0.0.1:8080'
-        response.headers['Access-Control-Allow-Credentials'] = 'true'
-        return response
-
-    return wrapper
-
-
 def login_required(f):
     @wraps(f)
     async def wrapper(request, *args, **kwargs):
-        print('called login')
         loop = asyncio.get_event_loop()
         redis = await storage.get_async_redis_pool(loop)
 
@@ -46,7 +35,6 @@ def login_required(f):
             response = await f(request, *args, **kwargs)
             return response
         else:
-            print('Returning login response')
             return json({'status': 'not_authorized'}, 403)
 
     return wrapper
@@ -94,9 +82,14 @@ async def get_code_websocket_handler(token):
     return handler
 
 
-@app.route('/api/register/', methods=['POST'])
-@cors_allow_all
+@app.route('/api/register/', methods=['POST', 'OPTIONS'])
 async def register(request):
+    if request.method == 'OPTIONS':
+        return json({'status': 'ok'})
+
+    if not request.json:
+        return json({'error': 'only json'}, status=400)
+
     username = request.json.get('username')
     password = request.json.get('password')
     if not username or not password:
@@ -114,13 +107,18 @@ async def register(request):
     return json({'status': 'ok'})
 
 
-@app.route('/api/login/', methods=['POST'])
-@cors_allow_all
+@app.route('/api/login/', methods=['POST', 'OPTIONS'])
 async def login(request):
+    if request.method == 'OPTIONS':
+        return json({'status': 'ok'})
+
+    if not request.json:
+        return json({'error': 'only json'}, status=400)
+
     username = request.json.get('username')
     password = request.json.get('password')
     if not username or not password:
-        return json({'error': 'fill all fields'})
+        return json({'error': 'fill all fields'}, status=400)
 
     loop = asyncio.get_event_loop()
     redis = await storage.get_async_redis_pool(loop)
@@ -140,7 +138,6 @@ async def login(request):
 
 
 @app.route('/api/logout/')
-@cors_allow_all
 async def logout(_request):
     response = json({'status': 'ok'})
     del response.cookies['session']
@@ -148,7 +145,6 @@ async def logout(_request):
 
 
 @app.route('/api/me/')
-@cors_allow_all
 @login_required
 async def me(request):
     loop = asyncio.get_event_loop()
@@ -159,7 +155,6 @@ async def me(request):
 
 
 @app.route('/api/my_collabs/')
-@cors_allow_all
 @login_required
 async def list_my_collabs(request):
     loop = asyncio.get_event_loop()
@@ -171,7 +166,6 @@ async def list_my_collabs(request):
 
 
 @app.route('/api/users/')
-@cors_allow_all
 async def list_users(request):
     loop = asyncio.get_event_loop()
     redis = await storage.get_async_redis_pool(loop)
@@ -189,10 +183,15 @@ async def list_users(request):
     return json(users)
 
 
-@app.route('/api/new_collab/', methods=['POST'])
-@cors_allow_all
+@app.route('/api/new_collab/', methods=['POST', 'OPTIONS'])
 @login_required
 async def new_collab(request):
+    if request.method == 'OPTIONS':
+        return json({'status': 'ok'})
+
+    if not request.json:
+        return json({'error': 'only json'}, status=400)
+
     loop = asyncio.get_event_loop()
     redis = await storage.get_async_redis_pool(loop)
 
@@ -206,7 +205,6 @@ async def new_collab(request):
 
 # noinspection PyUnresolvedReferences
 @app.route('/api/get_collab/<token>/')
-@cors_allow_all
 async def get_collab(_request, token):
     loop = asyncio.get_event_loop()
     redis = await storage.get_async_redis_pool(loop)
@@ -214,13 +212,6 @@ async def get_collab(_request, token):
     data = await redis.get(token)
     f = await redis.get(f'code:{token}:format')
     return json({'data': data, 'format': f})
-
-
-# noinspection PyUnresolvedReferences
-@app.route('/api/<wtf>', methods=['OPTIONS'])
-@cors_allow_all
-async def options_handler(_request, _wtf):
-    return json({'status': 'ok'})
 
 
 if __name__ == '__main__':
