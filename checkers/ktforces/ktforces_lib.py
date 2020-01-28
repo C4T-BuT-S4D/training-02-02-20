@@ -56,10 +56,11 @@ class CheckMachine:
 
         click(self.driver, "me-button", F)
 
+        ps = self.driver.page_source
         if c:
-            assert_in(self.n, self.driver.page_source, f"Can't find name on {F}")
-        assert_in(self.u, self.driver.page_source, f"Can't find username on {F}")
-        assert_in(self.p, self.driver.page_source, f"Can't find password on {F}")
+            assert_in(self.n, ps, f"Can't find name on {F}")
+        assert_in(self.u, ps, f"Can't find username on {F}")
+        assert_in(self.p, ps, f"Can't find password on {F}")
 
         sleep(0.5)
         click(self.driver, "me-close", F)
@@ -116,9 +117,10 @@ class CheckMachine:
         except NoSuchElementException:
             cquit(Status.MUMBLE, f"Can't find tv-data on task_view")
         
-        assert_in(task['name'], self.driver.page_source, f"Can't find task name on {F}")
-        assert_in(task['author'], self.driver.page_source, f"Can't find task author on {F}")
-        assert_in(task['desc'], self.driver.page_source, f"Can't find task description on {F}")
+        ps = self.driver.page_source
+        assert_in(task['name'], ps, f"Can't find task name on {F}")
+        assert_in(task['author'], ps, f"Can't find task author on {F}")
+        assert_in(task['desc'], ps, f"Can't find task description on {F}")
 
         fill(self.driver, "tv-flag", task['flag'], F)
 
@@ -142,9 +144,10 @@ class CheckMachine:
         except NoSuchElementException:
             cquit(Status.MUMBLE, f"No user on {F}")
 
-        assert_in(name, self.driver.page_source, f"Can't find name on {F}")
-        assert_in(username, self.driver.page_source, f"Can't find username on {F}")
-        assert_in("Score: 1", self.driver.page_source, f"Incorrect score on {F}")
+        ps = self.driver.page_source
+        assert_in(name, ps, f"Can't find name on {F}")
+        assert_in(username, ps, f"Can't find username on {F}")
+        assert_in("Score: 1", ps, f"Incorrect score on {F}")
 
     def check_task(self, idx, flag):
 
