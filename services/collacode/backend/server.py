@@ -144,8 +144,8 @@ async def logout(_request):
 
 
 @app.route('/api/me/')
-@login_required
 @cors_allow_all
+@login_required
 async def me(request):
     loop = asyncio.get_event_loop()
     redis = await storage.get_async_redis_pool(loop)
@@ -155,8 +155,8 @@ async def me(request):
 
 
 @app.route('/api/my_collabs/')
-@login_required
 @cors_allow_all
+@login_required
 async def list_my_collabs(request):
     loop = asyncio.get_event_loop()
     redis = await storage.get_async_redis_pool(loop)
@@ -186,8 +186,8 @@ async def list_users(request):
 
 
 @app.route('/api/new_collab/', methods=['POST'])
-@login_required
 @cors_allow_all
+@login_required
 async def new_collab(request):
     loop = asyncio.get_event_loop()
     redis = await storage.get_async_redis_pool(loop)
