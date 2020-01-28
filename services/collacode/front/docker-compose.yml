@@ -1,0 +1,28 @@
+version: '2.2'
+
+volumes:
+  build:
+
+services:
+  build:
+    build:
+      context: .
+      dockerfile: docker_config/build/Dockerfile
+    volumes:
+      - build:/build
+    restart: on-failure
+
+  nginx:
+      image: nginx:1.15.9-alpine
+      volumes:
+        - ./docker_config/nginx/conf:/etc/nginx/conf.d:ro
+        - ./docker_config/nginx/proxy_params:/etc/nginx/proxy_params:ro
+        - ./docker_config/nginx/mime.types:/etc/nginx/mime.types:ro
+        - build:/build:ro
+        - ./wasm:/wasm:ro
+      ports:
+        - "8080:80"
+      restart: on-failure
+      pids_limit: 100
+      cpus: 0.50
+      mem_limit: 200M

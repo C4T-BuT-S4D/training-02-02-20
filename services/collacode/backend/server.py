@@ -213,5 +213,6 @@ async def get_collab(_request, token):
     f = await redis.get(f'code:{token}:format')
     return json({'data': data, 'format': f})
 
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8000, protocol=WebSocketProtocol)
