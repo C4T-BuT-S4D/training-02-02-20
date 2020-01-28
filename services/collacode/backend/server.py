@@ -21,6 +21,16 @@ async def ignore_404s(request, _exception):
     return json({"error": f'{request.path} not found'}, status=404)
 
 
+def cors_allow_all(func):
+    @wraps(func)
+    async def wrapper(request, *args, **kwargs):
+        response = await func(request, *args, **kwargs)
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        return response
+
+    return wrapper
+
+
 def login_required(f):
     @wraps(f)
     async def wrapper(request, *args, **kwargs):
@@ -72,6 +82,7 @@ async def get_code_websocket_handler(token):
 
 
 @app.route('/api/register/', methods=['POST'])
+@cors_allow_all
 async def register(request):
     username = request.json.get('username')
     password = request.json.get('password')
@@ -91,6 +102,7 @@ async def register(request):
 
 
 @app.route('/api/login/', methods=['POST'])
+@cors_allow_all
 async def login(request):
     username = request.json.get('username')
     password = request.json.get('password')
@@ -115,6 +127,7 @@ async def login(request):
 
 
 @app.route('/api/logout/')
+@cors_allow_all
 async def logout(_request):
     response = json({'status': 'ok'})
     del response.cookies['session']
@@ -123,6 +136,7 @@ async def logout(_request):
 
 @app.route('/api/me/')
 @login_required
+@cors_allow_all
 async def me(request):
     loop = asyncio.get_event_loop()
     redis = await storage.get_async_redis_pool(loop)
@@ -133,6 +147,7 @@ async def me(request):
 
 @app.route('/api/my_collabs/')
 @login_required
+@cors_allow_all
 async def list_my_collabs(request):
     loop = asyncio.get_event_loop()
     redis = await storage.get_async_redis_pool(loop)
@@ -143,6 +158,7 @@ async def list_my_collabs(request):
 
 
 @app.route('/api/users/')
+@cors_allow_all
 async def list_users(request):
     loop = asyncio.get_event_loop()
     redis = await storage.get_async_redis_pool(loop)
@@ -162,6 +178,7 @@ async def list_users(request):
 
 @app.route('/api/new_collab/', methods=['POST'])
 @login_required
+@cors_allow_all
 async def new_collab(request):
     loop = asyncio.get_event_loop()
     redis = await storage.get_async_redis_pool(loop)
@@ -176,6 +193,7 @@ async def new_collab(request):
 
 # noinspection PyUnresolvedReferences
 @app.route('/api/get_collab/<token>/')
+@cors_allow_all
 async def get_collab(_request, token):
     loop = asyncio.get_event_loop()
     redis = await storage.get_async_redis_pool(loop)
