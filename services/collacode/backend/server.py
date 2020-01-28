@@ -25,8 +25,8 @@ def cors_allow_all(func):
     async def wrapper(request, *args, **kwargs):
         print('Called cors')
         response = await func(request, *args, **kwargs)
-        print('Cors got response')
-        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Origin'] = 'http://127.0.0.1:8080'
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
         return response
 
     return wrapper
