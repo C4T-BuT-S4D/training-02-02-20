@@ -1,6 +1,7 @@
 beautifulsoup4
 checklib
 lorem
+lxml
 pillow
 requests
 selenium
