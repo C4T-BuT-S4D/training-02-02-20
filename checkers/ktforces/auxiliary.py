@@ -36,6 +36,7 @@ def click(driver, idx, F, o=False):
         elem.click()
     except NoSuchElementException:
         cquit(Status.MUMBLE, f"Can't find {idx} on {F}")
+    driver.implicitly_wait(0.5)
 
 def fill(driver, idx, text, F):
     try:
