@@ -1,0 +1,11 @@
+{
+    "name": "alagunto/search_engine",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Alagunto",
+            "email": "priah@mail.ru"
+        }
+    ],
+    "require": {}
+}
