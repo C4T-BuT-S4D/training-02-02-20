@@ -15,7 +15,11 @@ import exceptions
 import storage
 
 app = Sanic('collacode')
-CORS(app, resources={r"/api/*": {"origins": "http://127.0.0.1:8080"}})
+CORS(app,
+    resources={r"/api/*": {"origins": "http://127.0.0.1:8080"}},
+    supports_credentials=True,
+    automatic_options=True,
+)
 
 
 @app.exception(NotFound)
