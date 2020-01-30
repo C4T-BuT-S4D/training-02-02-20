@@ -3,6 +3,7 @@
 import os
 import sys
 from selenium import webdriver
+from traceback import format_exc
 import signal
 import random
 from auxiliary import *
@@ -25,13 +26,14 @@ def get_driver():
     chrome_options.add_argument('--disable-gpu')
     chrome_options.add_argument('--disable-extensions')
     chrome_options.add_argument('--no-sandbox')
+    chrome_options.add_argument('--disable-dev-shm-usage')
 
 
     while True:
         # noinspection PyBroadException
         try:
             driver = webdriver.Chrome(options=chrome_options)
-            driver.set_page_load_timeout(60)
+            driver.set_page_load_timeout(20)
         except:
             continue
         else:
@@ -62,11 +64,11 @@ if __name__ == '__main__':
             get_driver()
             get_action.run(driver, *sys.argv[2:])
         else:
-            cquit(Status.ERROR)
+            cquit(Status.ERROR, 'System error', 'Invalid action provided')
     except SystemExit:
         close_driver()
         raise
-    except BaseException as e:
-        print('WTF?', e, type(e), repr(e))
+    except Exception as e:
+        tb = format_exc()
         close_driver()
-        cquit(Status.ERROR)
+        cquit(Status.ERROR, 'System error', f'Error: {e}\n{tb}')

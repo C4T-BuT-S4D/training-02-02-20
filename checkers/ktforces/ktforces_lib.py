@@ -50,7 +50,7 @@ class CheckMachine:
 
         click(self.driver, "logout-button", F)
 
-    def check_profile(self, c=True):
+    def check_profile(self, c=True, status=Status.MUMBLE):
 
         F = "profile"
 
@@ -58,15 +58,16 @@ class CheckMachine:
 
         ps = self.driver.page_source
         if c:
-            assert_in(self.n, ps, f"Can't find name on {F}")
-        assert_in(self.u, ps, f"Can't find username on {F}")
-        assert_in(self.p, ps, f"Can't find password on {F}")
+            assert_in(self.n, ps, f"Can't find name on {F}", status=status)
+        assert_in(self.u, ps, f"Can't find username on {F}", status=status)
+        assert_in(self.p, ps, f"Can't find password on {F}", status=status)
 
         try:
             wait_id(self.driver, "me-close", F)
         except NoSuchElementException:
-            cquit(Status.MUMBLE, f"Can't find close button after profile view")
-        sleep(0.5)
+            cquit(status, f"Can't find close button after profile view")
+        
+        self.driver.implicitly_wait(1.5)
         click(self.driver, "me-close", F)
 
     def create_task(self, text="", vuln=None, priv=False):
@@ -78,8 +79,8 @@ class CheckMachine:
 
         self.task = {
             'name': rnd_string(10),
-            'desc': T() if not (vuln == "2" or vuln == "3") else text,
-            'flag': rnd_string(32) if not (vuln == "4" or vuln == "5") else text,
+            'desc': T() if vuln not in "23" else text,
+            'flag': rnd_string(32) if vuln not in "45" else text,
             'author': self.u
         }
 
@@ -153,7 +154,7 @@ class CheckMachine:
         assert_in(username, ps, f"Can't find username on {F}")
         assert_in("Score: 1", ps, f"Incorrect score on {F}")
 
-    def check_task(self, idx, flag):
+    def check_task(self, idx, flag, status=Status.MUMBLE):
 
         F = "check_view"
 
@@ -162,6 +163,6 @@ class CheckMachine:
         try:
             wait_id(self.driver, "tv-data", F)
         except NoSuchElementException:
-            cquit(Status.MUMBLE, f"Can't find tv-data on task_view")
+            cquit(status, f"Can't find tv-data on task_view")
 
-        assert_in(flag, self.driver.page_source, f"Can't find task description on {F}")
+        assert_in(flag, self.driver.page_source, f"Can't find task description on {F}", status=status)

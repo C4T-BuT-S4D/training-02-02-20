@@ -21,16 +21,16 @@ def run(driver, ip, flag_id, flag, vuln):
         cquit(Status.MUMBLE, f"login")
 
     if vuln == "1":
-        mch1.check_profile(False)
+        mch1.check_profile(False, status=Status.CORRUPT)
     else:
-        mch1.check_task(task_id, flag)
+        mch1.check_task(task_id, flag, status=Status.CORRUPT)
 
     driver.get(f"{mch1.url}tasks/")
 
     try:
         wait_id(driver, "t-list", "check_task")
     except NoSuchElementException:
-        cquit(Status.MUMBLE, f"Can't find task_id on task_list")
+        cquit(Status.MUMBLE, f"Can't open task list")
 
     tasks = re.findall('.{8}-.{4}-.{4}-.{4}-.{12}', driver.page_source)
 

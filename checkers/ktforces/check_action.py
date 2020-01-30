@@ -25,7 +25,7 @@ def run(driver, ip):
         wait_id(driver, "fl-close", "logout")
     except NoSuchElementException:
         cquit(Status.MUMBLE, f"Can't find close button after logout")
-    sleep(0.5)
+    driver.implicitly_wait(1.5)
     click(driver, "fl-close", "logout")
 
     mch2.register()
@@ -44,7 +44,7 @@ def run(driver, ip):
         wait_id(driver, "fl-close", "logout")
     except NoSuchElementException:
         cquit(Status.MUMBLE, f"Can't find close button after logout")
-    sleep(0.5)
+    driver.implicitly_wait(1.5)
     click(driver, "fl-close", "logout")
 
     mch1.login()
