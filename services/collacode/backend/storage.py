@@ -75,6 +75,8 @@ async def get_users_collabs(redis, username):
 async def get_current_user(redis, request):
     session = request.cookies['session']
     user_data = await redis.get(session)
+    if not user_data:
+        return None
     return ujson.loads(user_data)
 
 

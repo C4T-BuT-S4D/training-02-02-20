@@ -15,7 +15,12 @@ import exceptions
 import storage
 
 app = Sanic('collacode')
-CORS(app, resources={r"/api/*": {"origins": "http://127.0.0.1:8080"}})
+CORS(
+    app, 
+    resources={r"/api/*": {"origins": "http://127.0.0.1:8080"}}, 
+    supports_credentials=True,
+    automatic_options=True,
+)
 
 
 @app.exception(NotFound)
@@ -30,7 +35,7 @@ def login_required(f):
         redis = await storage.get_async_redis(loop)
 
         session = request.cookies.get('session')
-        is_authorized = session and redis.exists(session)
+        is_authorized = session and (await redis.exists(session))
 
         if is_authorized:
             response = await f(request, *args, **kwargs)
@@ -49,7 +54,6 @@ async def subscribe_handler(_request, ws):
     except ValueError:
         await ws.send(ujson.dumps({'error': 'invalid json data'}))
         return
-
     token = decoded_data.get('token', '')
 
     loop = asyncio.get_event_loop()
@@ -58,9 +62,7 @@ async def subscribe_handler(_request, ws):
     mpsc = Receiver(loop=loop)
     await redis.subscribe(mpsc.channel(f'updates:{token}'))
     async for channel, msg in mpsc.iter():
-        print('Got data: ', channel, msg)
         await ws.send(ujson.dumps({'data': msg.decode()}))
-        print('Sent')
 
 
 @app.websocket("/api/code/")
@@ -96,7 +98,6 @@ async def code_handler(_request, ws):
             await ws.send(ujson.dumps({'error': 'code too long'}))
             continue
 
-        print('Publishing')
         await redis.set(token, new_data)
         await redis.publish(f'updates:{token}', diff)
 
