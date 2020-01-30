@@ -6,6 +6,7 @@ from selenium import webdriver
 from traceback import format_exc
 import signal
 import random
+import selenium.common.exceptions.ElementClickInterceptedException
 from auxiliary import *
 
 import check_action
@@ -48,6 +49,7 @@ def close_driver():
     global driver
     if driver != None:
         driver.quit()
+        driver = None
 
 if __name__ == '__main__':
     try:
@@ -65,6 +67,9 @@ if __name__ == '__main__':
             get_action.run(driver, *sys.argv[2:])
         else:
             cquit(Status.ERROR, 'System error', 'Invalid action provided')
+    except ElementClickInterceptedException:
+        close_driver()
+        cquit(Status.DOWN, "Can't login", "Fking ClickInterceptedException")
     except SystemExit:
         close_driver()
         raise
