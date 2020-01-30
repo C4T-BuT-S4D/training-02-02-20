@@ -120,9 +120,9 @@ class CheckMachine:
             decoded = json.loads(data)
         except ValueError:
             cquit(Status.MUMBLE, 'Invalid data from code websocket')
-        assert_in('sender_id', data, 'sender_id not returned for code websocket')
-
-        return ws
+        else:
+            assert_in('sender_id', decoded, 'sender_id not returned for code websocket')
+            return ws
 
     @staticmethod
     def send_collab_data(ws, token, data):
