@@ -58,15 +58,15 @@ async def subscribe_handler(_request, ws):
     mpsc = Receiver(loop=loop)
     await redis.subscribe(mpsc.channel(f'updates:{token}'))
     async for channel, msg in mpsc.iter():
-        print('Got data: ', channel, msg)
-        await ws.send(ujson.dumps({'data': msg.decode()}))
-        print('Sent')
+        await ws.send(msg)
 
 
 @app.websocket("/api/code/")
 async def code_handler(_request, ws):
     loop = asyncio.get_event_loop()
     redis = await storage.get_async_redis(loop)
+    sender_id = secrets.token_hex(5)
+    await ws.send(ujson.dumps({'sender_id': sender_id}))
 
     dmp = diff_match_patch()
 
@@ -96,9 +96,13 @@ async def code_handler(_request, ws):
             await ws.send(ujson.dumps({'error': 'code too long'}))
             continue
 
-        print('Publishing')
         await redis.set(token, new_data)
-        await redis.publish(f'updates:{token}', diff)
+
+        publish_data = ujson.dumps({
+            'sender_id': sender_id,
+            'data': diff,
+        })
+        await redis.publish(f'updates:{token}', publish_data)
 
 
 @app.route('/api/register/', methods=['POST', 'OPTIONS'])
