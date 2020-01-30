@@ -2,6 +2,7 @@ import asyncio
 import secrets
 from functools import wraps
 
+import ujson
 from aioredis.pubsub import Receiver
 from diff_match_patch import diff_match_patch
 from sanic import Sanic
@@ -40,46 +41,61 @@ def login_required(f):
     return wrapper
 
 
-async def get_code_websocket_handler(token):
+@app.websocket("/api/subscribe/")
+async def subscribe_handler(_request, ws):
+    data = await ws.recv()
+    try:
+        decoded_data = ujson.decode(data)
+    except ValueError:
+        await ws.send(ujson.dumps({'error': 'invalid json data'}))
+        return
+
+    token = decoded_data.get('token', '')
+
     loop = asyncio.get_event_loop()
     redis = await storage.get_async_redis_pool(loop)
 
-    async def in_handler(ws):
-        dmp = diff_match_patch()
+    mpsc = Receiver(loop=loop)
+    await redis.subscribe(mpsc.channel(f'updates:{token}'))
+    async for channel, msg in mpsc.iter():
+        await ws.send(msg)
 
-        while True:
-            data = await ws.recv()
-            cur_data = await redis.get(token) or b''
-            cur_data = cur_data.decode()
 
-            try:
-                patch = dmp.patch_fromText(data)
-            except ValueError:
-                await ws.send({'error': 'invalid patch'})
-                continue
+@app.websocket("/api/code/")
+async def handler(_request, ws):
+    loop = asyncio.get_event_loop()
+    redis = await storage.get_async_redis_pool(loop)
 
-            new_data, _ = dmp.patch_apply(patch, cur_data)
+    dmp = diff_match_patch()
 
-            if len(new_data) > 32768:
-                await ws.send({'error': 'code too long'})
-                continue
+    while True:
+        data = await ws.recv()
+        try:
+            decoded_data = ujson.decode(data)
+        except ValueError:
+            await ws.send(ujson.dumps({'error': 'invalid json data'}))
+            continue
 
-            await redis.set(token, new_data)
-            await redis.publish(f'updates:{token}', data)
+        token = decoded_data['token']
+        diff = decoded_data['diff']
 
-    async def out_handler(ws):
-        mpsc = Receiver(loop=loop)
-        await redis.subscribe(mpsc.channel(f'updates:{token}'))
-        async for channel, msg in mpsc.iter():
-            await ws.send(msg)
+        cur_data = await redis.get(token) or b''
+        cur_data = cur_data.decode()
 
-    async def handler(_request, ws):
-        in_task = asyncio.create_task(in_handler(ws))
-        out_task = asyncio.create_task(out_handler(ws))
-        await in_task
-        await out_task
+        try:
+            patch = dmp.patch_fromText(diff)
+        except ValueError:
+            await ws.send(ujson.dumps({'error': 'invalid patch'}))
+            continue
 
-    return handler
+        new_data, _ = dmp.patch_apply(patch, cur_data)
+
+        if len(new_data) > 32768:
+            await ws.send(ujson.dumps({'error': 'code too long'}))
+            continue
+
+        await redis.set(token, new_data)
+        await redis.publish(f'updates:{token}', diff)
 
 
 @app.route('/api/register/', methods=['POST', 'OPTIONS'])
@@ -196,9 +212,6 @@ async def new_collab(request):
     redis = await storage.get_async_redis_pool(loop)
 
     token = await storage.add_collab(redis, request)
-
-    handler = await get_code_websocket_handler(token)
-    app.add_websocket_route(handler, f'/api/code/{token}')
 
     return json({'token': token})
 
