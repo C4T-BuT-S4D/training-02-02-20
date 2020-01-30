@@ -5,24 +5,22 @@ import ujson
 
 import exceptions
 
-_async_redis_pool = None
+_async_redis = None
 
 
-async def get_async_redis_pool(loop):
-    global _async_redis_pool
+async def get_async_redis(loop):
+    global _async_redis
 
-    if not _async_redis_pool:
+    if not _async_redis:
         address = f'redis://redis:6379'
         db = 1
-        _async_redis_pool = await aioredis.create_redis_pool(
+        _async_redis = await aioredis.create_redis(
             address=address,
             db=db,
-            minsize=5,
-            maxsize=15,
             loop=loop,
         )
 
-    return _async_redis_pool
+    return _async_redis
 
 
 async def add_user(redis, username, password):

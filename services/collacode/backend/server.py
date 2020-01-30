@@ -27,7 +27,7 @@ def login_required(f):
     @wraps(f)
     async def wrapper(request, *args, **kwargs):
         loop = asyncio.get_event_loop()
-        redis = await storage.get_async_redis_pool(loop)
+        redis = await storage.get_async_redis(loop)
 
         session = request.cookies.get('session')
         is_authorized = session and redis.exists(session)
@@ -53,7 +53,7 @@ async def subscribe_handler(_request, ws):
     token = decoded_data.get('token', '')
 
     loop = asyncio.get_event_loop()
-    redis = await storage.get_async_redis_pool(loop)
+    redis = await storage.get_async_redis(loop)
 
     mpsc = Receiver(loop=loop)
     await redis.subscribe(mpsc.channel(f'updates:{token}'))
@@ -66,7 +66,7 @@ async def subscribe_handler(_request, ws):
 @app.websocket("/api/code/")
 async def code_handler(_request, ws):
     loop = asyncio.get_event_loop()
-    redis = await storage.get_async_redis_pool(loop)
+    redis = await storage.get_async_redis(loop)
 
     dmp = diff_match_patch()
 
@@ -117,7 +117,7 @@ async def register(request):
         return json({'error': 'too short username'}, status=400)
 
     loop = asyncio.get_event_loop()
-    redis = await storage.get_async_redis_pool(loop)
+    redis = await storage.get_async_redis(loop)
     try:
         await storage.add_user(redis, username, password)
     except exceptions.UserExistsException:
@@ -140,7 +140,7 @@ async def login(request):
         return json({'error': 'fill all fields'}, status=400)
 
     loop = asyncio.get_event_loop()
-    redis = await storage.get_async_redis_pool(loop)
+    redis = await storage.get_async_redis(loop)
     user = await storage.get_user(redis, username)
     if not user:
         return json({'error': 'invalid credentials'}, status=403)
@@ -167,7 +167,7 @@ async def logout(_request):
 @login_required
 async def me(request):
     loop = asyncio.get_event_loop()
-    redis = await storage.get_async_redis_pool(loop)
+    redis = await storage.get_async_redis(loop)
 
     user = await storage.get_current_user(redis, request)
     return json(user)
@@ -177,7 +177,7 @@ async def me(request):
 @login_required
 async def list_my_collabs(request):
     loop = asyncio.get_event_loop()
-    redis = await storage.get_async_redis_pool(loop)
+    redis = await storage.get_async_redis(loop)
 
     user = await storage.get_current_user(redis, request)
     collabs = await storage.get_users_collabs(redis, user['username'])
@@ -187,7 +187,7 @@ async def list_my_collabs(request):
 @app.route('/api/users/')
 async def list_users(request):
     loop = asyncio.get_event_loop()
-    redis = await storage.get_async_redis_pool(loop)
+    redis = await storage.get_async_redis(loop)
     limit = request.args.get('limit', 10)
     offset = request.args.get('offset', 0)
     try:
@@ -212,7 +212,7 @@ async def new_collab(request):
         return json({'error': 'only json'}, status=400)
 
     loop = asyncio.get_event_loop()
-    redis = await storage.get_async_redis_pool(loop)
+    redis = await storage.get_async_redis(loop)
 
     token = await storage.add_collab(redis, request)
 
@@ -223,7 +223,7 @@ async def new_collab(request):
 @app.route('/api/get_collab/<token>/')
 async def get_collab(_request, token):
     loop = asyncio.get_event_loop()
-    redis = await storage.get_async_redis_pool(loop)
+    redis = await storage.get_async_redis(loop)
 
     data = await redis.get(token)
     f = await redis.get(f'code:{token}:format')
