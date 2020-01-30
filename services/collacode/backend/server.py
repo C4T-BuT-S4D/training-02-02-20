@@ -62,7 +62,7 @@ async def subscribe_handler(_request, ws):
     mpsc = Receiver(loop=loop)
     await redis.subscribe(mpsc.channel(f'updates:{token}'))
     async for channel, msg in mpsc.iter():
-        await ws.send(msg)
+        await ws.send(msg.decode())
 
 
 @app.websocket("/api/code/")
