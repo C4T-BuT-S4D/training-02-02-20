@@ -103,15 +103,27 @@ class CheckMachine:
 
         return data
 
-    def get_collab_ws(self, token):
+    def get_collab_in_ws(self, token):
         ws = websocket.WebSocket()
-        url = f'ws://{self.host}:{self.port}/api/code/{token}/'
+        url = f'ws://{self.host}:{self.port}/api/subscribe/'
+        ws.connect(url)
+        ws.send(json.dumps({"token": token}))
+        assert_eq(101, ws.status, 'Invalid ws status on subscribe')
+        return ws
+
+    def get_collab_out_ws(self):
+        ws = websocket.WebSocket()
+        url = f'ws://{self.host}:{self.port}/api/code/'
         ws.connect(url)
         return ws
 
     @staticmethod
-    def send_collab_data(ws, data):
-        return ws.send(data)
+    def send_collab_data(ws, token, data):
+        to_send = json.dumps({
+            'token': token,
+            'diff': data,
+        })
+        return ws.send(to_send)
 
     @staticmethod
     def recv_collab_data(ws):

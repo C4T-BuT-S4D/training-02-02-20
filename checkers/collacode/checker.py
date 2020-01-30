@@ -25,9 +25,13 @@ def put(host, flag_id, flag, _vuln):
     diff = dmp.patch_toText(patch)
 
     collab_token = mch.new_collab(sess, f)
-    collab_ws = mch.get_collab_ws(collab_token)
-    mch.send_collab_data(collab_ws, diff)
-    result = mch.recv_collab_data(collab_ws)
+
+    collab_in_ws = mch.get_collab_in_ws(collab_token)
+    collab_out_ws = mch.get_collab_out_ws()
+
+    mch.send_collab_data(collab_out_ws, collab_token, diff)
+    result = mch.recv_collab_data(collab_in_ws)
+
     assert_eq(result, diff.encode(), 'Invalid data returned from collab socket')
 
     cquit(Status.OK, f"{username}:{password}:{collab_token}")
@@ -79,7 +83,9 @@ def check(host):
 
     f, data = mch.random_data()
     collab_token = mch.new_collab(sess, f)
-    collab_ws = mch.get_collab_ws(collab_token)
+
+    collab_in_ws = mch.get_collab_in_ws(collab_token)
+    collab_out_ws = mch.get_collab_out_ws()
 
     blocks = [data[i:i + 100] for i in range(0, len(data), 100)]
 
@@ -88,8 +94,8 @@ def check(host):
         patch = dmp.patch_make(cur_data, cur_data + block)
         diff = dmp.patch_toText(patch)
 
-        mch.send_collab_data(collab_ws, diff)
-        result = mch.recv_collab_data(collab_ws)
+        mch.send_collab_data(collab_out_ws, collab_token, diff)
+        result = mch.recv_collab_data(collab_in_ws)
         assert_eq(result, diff.encode(), 'Invalid data returned from collab socket')
 
         cur_data += block
@@ -123,6 +129,8 @@ if __name__ == '__main__':
         cquit(Status.ERROR)
     except requests.exceptions.ConnectionError:
         cquit(Status.DOWN, 'Connection error')
+    except websocket._exceptions.WebSocketConnectionClosedException:
+        cquit(Status.DOWN, 'Websocket closed unexpectedly')
     except SystemError as e:
         raise
     except Exception as e:
