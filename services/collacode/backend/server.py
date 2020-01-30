@@ -58,11 +58,13 @@ async def subscribe_handler(_request, ws):
     mpsc = Receiver(loop=loop)
     await redis.subscribe(mpsc.channel(f'updates:{token}'))
     async for channel, msg in mpsc.iter():
-        await ws.send(msg)
+        await ws.send(ujson.dumps({'data': msg.decode()})
+
+                      @ app.websocket("/api/code/")
+                      async
 
 
-@app.websocket("/api/code/")
-async def handler(_request, ws):
+def code_handler(_request, ws):
     loop = asyncio.get_event_loop()
     redis = await storage.get_async_redis_pool(loop)
 
