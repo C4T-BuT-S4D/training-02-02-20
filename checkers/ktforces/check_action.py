@@ -2,6 +2,7 @@ import random
 from selenium.common.exceptions import NoSuchElementException
 from auxiliary import *
 from ktforces_lib import *
+from time import sleep
 
 
 def run(driver, ip):
@@ -25,7 +26,7 @@ def run(driver, ip):
         wait_id(driver, "fl-close", "logout")
     except NoSuchElementException:
         cquit(Status.MUMBLE, f"Can't find close button after logout")
-    driver.implicitly_wait(1.5)
+    sleep(2)
     click(driver, "fl-close", "logout")
 
     mch2.register()
@@ -44,7 +45,7 @@ def run(driver, ip):
         wait_id(driver, "fl-close", "logout")
     except NoSuchElementException:
         cquit(Status.MUMBLE, f"Can't find close button after logout")
-    driver.implicitly_wait(1.5)
+    sleep(2)
     click(driver, "fl-close", "logout")
 
     mch1.login()

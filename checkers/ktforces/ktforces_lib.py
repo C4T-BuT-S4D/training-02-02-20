@@ -67,7 +67,7 @@ class CheckMachine:
         except NoSuchElementException:
             cquit(status, f"Can't find close button after profile view")
         
-        self.driver.implicitly_wait(1.5)
+        sleep(2)
         click(self.driver, "me-close", F)
 
     def create_task(self, text="", vuln=None, priv=False):
@@ -79,8 +79,8 @@ class CheckMachine:
 
         self.task = {
             'name': rnd_string(10),
-            'desc': T() if vuln not in "23" else text,
-            'flag': rnd_string(32) if vuln not in "45" else text,
+            'desc': T() if vuln is None or vuln not in "23" else text,
+            'flag': rnd_string(32) if vuln is None or vuln not in "45" else text,
             'author': self.u
         }
 

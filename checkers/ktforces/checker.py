@@ -6,7 +6,7 @@ from selenium import webdriver
 from traceback import format_exc
 import signal
 import random
-import selenium.common.exceptions.ElementClickInterceptedException
+from selenium.common.exceptions import ElementClickInterceptedException
 from auxiliary import *
 
 import check_action
