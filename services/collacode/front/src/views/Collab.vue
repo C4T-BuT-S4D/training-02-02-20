@@ -79,6 +79,7 @@ export default {
                             const dmp = new DiffMatchPatch();
                             const patch = dmp.patch_fromText(data);
                             self.data = dmp.patch_apply(patch, self.data)[0];
+                            self.prevData = self.data;
                         }
                     };
                     self.recvS.send(
@@ -102,7 +103,7 @@ export default {
                         );
                     }
                     self.prevData = self.data;
-                    setTimeout(tick, 1000);
+                    setTimeout(tick, 100);
                 };
 
                 tick();
