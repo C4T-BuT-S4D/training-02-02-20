@@ -115,6 +115,13 @@ class CheckMachine:
         ws = websocket.WebSocket()
         url = f'ws://{self.host}:{self.port}/api/code/'
         ws.connect(url)
+        data = ws.recv()
+        try:
+            decoded = json.loads(data)
+        except ValueError:
+            cquit(Status.MUMBLE, 'Invalid data from code websocket')
+        assert_in('sender_id', data, 'sender_id not returned for code websocket')
+
         return ws
 
     @staticmethod
@@ -134,6 +141,7 @@ class CheckMachine:
             cquit(Status.MUMBLE, 'Invalid data from code websocket')
         else:
             assert_in('data', resp, 'Invalid data from code websocket')
+            assert_in('sender_id', resp, 'sender_id not returned for subscribe websocket')
             return resp['data']
 
     @staticmethod
