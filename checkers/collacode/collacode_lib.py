@@ -127,7 +127,14 @@ class CheckMachine:
 
     @staticmethod
     def recv_collab_data(ws):
-        return ws.recv()
+        encoded = ws.recv()
+        try:
+            resp = json.loads(encoded)
+        except (ValueError, UnicodeDecodeError):
+            cquit(Status.MUMBLE, 'Invalid data from code websocket')
+        else:
+            assert_in('data', resp, 'Invalid data from code websocket')
+            return resp['data']
 
     @staticmethod
     def json_generator():

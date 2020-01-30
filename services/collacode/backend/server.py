@@ -58,13 +58,13 @@ async def subscribe_handler(_request, ws):
     mpsc = Receiver(loop=loop)
     await redis.subscribe(mpsc.channel(f'updates:{token}'))
     async for channel, msg in mpsc.iter():
-        await ws.send(ujson.dumps({'data': msg.decode()})
+        print('Got data: ', channel, msg)
+        await ws.send(ujson.dumps({'data': msg.decode()}))
+        print('Sent')
 
-                      @ app.websocket("/api/code/")
-                      async
 
-
-def code_handler(_request, ws):
+@app.websocket("/api/code/")
+async def code_handler(_request, ws):
     loop = asyncio.get_event_loop()
     redis = await storage.get_async_redis_pool(loop)
 
@@ -96,6 +96,7 @@ def code_handler(_request, ws):
             await ws.send(ujson.dumps({'error': 'code too long'}))
             continue
 
+        print('Publishing')
         await redis.set(token, new_data)
         await redis.publish(f'updates:{token}', diff)
 
@@ -111,16 +112,16 @@ async def register(request):
     username = request.json.get('username')
     password = request.json.get('password')
     if not username or not password:
-        return json({'error': 'fill all fields'})
+        return json({'error': 'fill all fields'}, status=400)
     if len(username) < 5:
-        return json({'error': 'too short username'})
+        return json({'error': 'too short username'}, status=400)
 
     loop = asyncio.get_event_loop()
     redis = await storage.get_async_redis_pool(loop)
     try:
         await storage.add_user(redis, username, password)
     except exceptions.UserExistsException:
-        return json({'error': 'username taken'})
+        return json({'error': 'username taken'}, status=400)
 
     return json({'status': 'ok'})
 
@@ -142,9 +143,9 @@ async def login(request):
     redis = await storage.get_async_redis_pool(loop)
     user = await storage.get_user(redis, username)
     if not user:
-        return json({'error': 'invalid credentials'})
+        return json({'error': 'invalid credentials'}, status=403)
     if user.get('password', '') != password:
-        return json({'error': 'invalid credentials'})
+        return json({'error': 'invalid credentials'}, status=403)
 
     session = secrets.token_hex(30)
     await storage.set_session(redis, session, user)

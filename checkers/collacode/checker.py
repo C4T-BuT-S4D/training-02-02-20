@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import sys
+from traceback import format_exc
 
 from diff_match_patch import diff_match_patch
 
@@ -32,7 +33,7 @@ def put(host, flag_id, flag, _vuln):
     mch.send_collab_data(collab_out_ws, collab_token, diff)
     result = mch.recv_collab_data(collab_in_ws)
 
-    assert_eq(result, diff.encode(), 'Invalid data returned from collab socket')
+    assert_eq(result, diff, 'Invalid data returned from collab socket')
 
     cquit(Status.OK, f"{username}:{password}:{collab_token}")
 
@@ -96,7 +97,7 @@ def check(host):
 
         mch.send_collab_data(collab_out_ws, collab_token, diff)
         result = mch.recv_collab_data(collab_in_ws)
-        assert_eq(result, diff.encode(), 'Invalid data returned from collab socket')
+        assert_eq(result, diff, 'Invalid data returned from collab socket')
 
         cur_data += block
 
@@ -134,5 +135,6 @@ if __name__ == '__main__':
     except SystemError as e:
         raise
     except Exception as e:
-        print(f'Got checksystem exception {e} {type(e)} {repr(e)}')
+        info = format_exc()
+        print(f'Got checksystem exception {e} {type(e)} {repr(e)}\n{info}')
         cquit(Status.ERROR, 'System error', str(e))
