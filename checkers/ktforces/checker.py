@@ -69,7 +69,7 @@ if __name__ == '__main__':
             cquit(Status.ERROR, 'System error', 'Invalid action provided')
     except ElementClickInterceptedException:
         close_driver()
-        cquit(Status.DOWN, "Can't login", "Fking ClickInterceptedException")
+        cquit(Status.DOWN, "With love from stable checker <3", "Fking ClickInterceptedException")
     except SystemExit:
         close_driver()
         raise
