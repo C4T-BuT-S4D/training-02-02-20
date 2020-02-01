@@ -17,4 +17,3 @@ for v_id in r.findall(resp.text):
     print(resp.text)
 
 
-
