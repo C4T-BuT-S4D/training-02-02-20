@@ -1,140 +1,118 @@
 #!/usr/bin/env python3
 
-import sys
-from traceback import format_exc
-
 from diff_match_patch import diff_match_patch
 
 from collacode_lib import *
 
+import gevent.monkey
 
-def put(host, flag_id, flag, _vuln):
-    dmp = diff_match_patch()
-
-    mch = CheckMachine(host)
-    username, password = mch.register()
-    sess = mch.login(username, password)
-
-    f = 'json'
-    data = json.dumps(
-        {
-            'flag': flag,
-            'flag_id': flag_id,
-        },
-    )
-    patch = dmp.patch_make('', data)
-    diff = dmp.patch_toText(patch)
-
-    collab_token = mch.new_collab(sess, f)
-
-    collab_in_ws = mch.get_collab_in_ws(collab_token)
-    collab_out_ws = mch.get_collab_out_ws()
-
-    mch.send_collab_data(collab_out_ws, collab_token, diff)
-    result = mch.recv_collab_data(collab_in_ws)
-
-    assert_eq(result, diff, 'Invalid data returned from collab socket')
-
-    cquit(Status.OK, f"{username}:{password}:{collab_token}")
+gevent.monkey.patch_all()
 
 
-def get(host, flag_id, flag, _vuln):
-    default_status = status.Status.CORRUPT
-    mch = CheckMachine(host)
-    username, password, collab_token = flag_id.split(':')
-    sess = mch.login(username, password)
+class Checker(BaseChecker):
+    def __init__(self, *args, **kwargs):
+        super(Checker, self).__init__(*args, **kwargs)
+        self.dmp = diff_match_patch()
+        self.mch = CheckMachine(self.host)
 
-    my_collabs = mch.get_my_collabs(sess)
-    assert_in(
-        collab_token, my_collabs,
-        'Could not find collab in my listing',
-        status=default_status,
-    )
+    def action(self, action, *args, **kwargs):
+        try:
+            super(Checker, self).action(action, *args, **kwargs)
+        except requests.exceptions.ConnectionError:
+            cquit(Status.DOWN, 'Connection error')
+        except websocket._exceptions.WebSocketConnectionClosedException:
+            cquit(Status.DOWN, 'Websocket closed unexpectedly')
 
-    s = get_initialized_session()
-    collab = mch.get_collab(s, collab_token)
-    assert_eq(collab['format'], 'json', 'Invalid collab format', status=default_status)
-    with handle_exception(
-            ValueError,
-            public='Invalid collab data',
-            private='JSON decode exception while checking collab',
-            status=default_status):
-        collab_data = json.loads(collab['data'])
+    def check(self, *_args, **_kwargs):
+        username, password = self.mch.register()
+        users = self.mch.get_user_listing()
+        assert_in(username, users, 'Could not find user in listing')
+        sess = self.mch.login(username, password)
+        me = self.mch.get_me(sess)
 
-    assert_in('flag', collab_data, 'No flag in collab', status=default_status)
-    assert_eq(flag, collab_data['flag'], 'Invalid flag in collab', status=default_status)
+        assert_in('username', me, 'Invalid me')
+        assert_in('password', me, 'Invalid me')
+        assert_eq(me['username'], username, 'Invalid me')
+        assert_eq(me['password'], password, 'Invalid me')
 
-    cquit(Status.OK)
+        f, data = self.mch.random_data()
+        collab_token = self.mch.new_collab(sess, f)
 
+        collab_in_ws = self.mch.get_collab_in_ws(collab_token)
+        collab_out_ws = self.mch.get_collab_out_ws()
 
-def check(host):
-    dmp = diff_match_patch()
+        blocks = [data[i:i + 100] for i in range(0, len(data), 100)]
 
-    mch = CheckMachine(host)
-    username, password = mch.register()
-    users = mch.get_user_listing()
-    assert_in(username, users, 'Could not find user in listing')
-    sess = mch.login(username, password)
-    me = mch.get_me(sess)
+        cur_data = ''
+        for block in blocks:
+            patch = self.dmp.patch_make(cur_data, cur_data + block)
+            diff = self.dmp.patch_toText(patch)
 
-    assert_in('username', me, 'Invalid me')
-    assert_in('password', me, 'Invalid me')
-    assert_eq(me['username'], username, 'Invalid me')
-    assert_eq(me['password'], password, 'Invalid me')
+            self.mch.send_collab_data(collab_out_ws, collab_token, diff)
+            result = self.mch.recv_collab_data(collab_in_ws)
+            assert_eq(result, diff, 'Invalid data returned from collab socket')
 
-    f, data = mch.random_data()
-    collab_token = mch.new_collab(sess, f)
+            cur_data += block
 
-    collab_in_ws = mch.get_collab_in_ws(collab_token)
-    collab_out_ws = mch.get_collab_out_ws()
+        full = self.mch.get_collab(sess, collab_token)
+        assert_eq(full['format'], f, 'Invalid collab format')
+        assert_eq(full['data'], data, 'Invalid collab data')
 
-    blocks = [data[i:i + 100] for i in range(0, len(data), 100)]
+        collabs = self.mch.get_my_collabs(sess)
+        assert_in(collab_token, collabs, 'Collab not found in listing')
 
-    cur_data = ''
-    for block in blocks:
-        patch = dmp.patch_make(cur_data, cur_data + block)
-        diff = dmp.patch_toText(patch)
+        cquit(Status.OK)
 
-        mch.send_collab_data(collab_out_ws, collab_token, diff)
-        result = mch.recv_collab_data(collab_in_ws)
+    def put(self, flag, flag_id, *_args, **_kwargs):
+        username, password = self.mch.register()
+        sess = self.mch.login(username, password)
+
+        f = 'json'
+        data = json.dumps(
+            {
+                'flag': flag,
+                'flag_id': flag_id,
+            },
+        )
+        patch = self.dmp.patch_make('', data)
+        diff = self.dmp.patch_toText(patch)
+
+        collab_token = self.mch.new_collab(sess, f)
+
+        collab_in_ws = self.mch.get_collab_in_ws(collab_token)
+        collab_out_ws = self.mch.get_collab_out_ws()
+
+        self.mch.send_collab_data(collab_out_ws, collab_token, diff)
+        result = self.mch.recv_collab_data(collab_in_ws)
+
         assert_eq(result, diff, 'Invalid data returned from collab socket')
 
-        cur_data += block
+        cquit(Status.OK, f"{username}:{password}:{collab_token}")
 
-    full = mch.get_collab(sess, collab_token)
-    assert_eq(full['format'], f, 'Invalid collab format')
-    assert_eq(full['data'], data, 'Invalid collab data')
+    def get(self, flag, flag_id, *_args, **_kwargs):
+        default_status = status.Status.CORRUPT
 
-    collabs = mch.get_my_collabs(sess)
-    assert_in(collab_token, collabs, 'Collab not found in listing')
+        username, password, collab_token = flag_id.split(':')
+        sess = self.mch.login(username, password)
 
-    cquit(Status.OK)
+        my_collabs = self.mch.get_my_collabs(sess)
+        assert_in(
+            collab_token, my_collabs,
+            'Could not find collab in my listing',
+            status=default_status,
+        )
 
+        s = get_initialized_session()
+        collab = self.mch.get_collab(s, collab_token)
+        assert_eq(collab['format'], 'json', 'Invalid collab format', status=default_status)
+        with handle_exception(
+                ValueError,
+                public='Invalid collab data',
+                private='JSON decode exception while checking collab',
+                status=default_status):
+            collab_data = json.loads(collab['data'])
 
-if __name__ == '__main__':
-    action, *args = sys.argv[1:]
+        assert_in('flag', collab_data, 'No flag in collab', status=default_status)
+        assert_eq(flag, collab_data['flag'], 'Invalid flag in collab', status=default_status)
 
-    try:
-        if action == "check":
-            host, = args
-            check(host)
-        elif action == "put":
-            host, flag_id, flag, vuln = args
-            put(host, flag_id, flag, vuln)
-        elif action == "get":
-            host, flag_id, flag, vuln = args
-            get(host, flag_id, flag, vuln)
-        else:
-            cquit(Status.ERROR, 'System error', 'Unknown action: ' + action)
-
-        cquit(Status.ERROR)
-    except requests.exceptions.ConnectionError:
-        cquit(Status.DOWN, 'Connection error')
-    except websocket._exceptions.WebSocketConnectionClosedException:
-        cquit(Status.DOWN, 'Websocket closed unexpectedly')
-    except SystemError as e:
-        raise
-    except Exception as e:
-        info = format_exc()
-        print(f'Got checksystem exception {e} {type(e)} {repr(e)}\n{info}')
-        cquit(Status.ERROR, 'System error', str(e))
+        cquit(Status.OK)
