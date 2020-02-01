@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/gin-contrib/gzip"
+	"github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 	"net/http"
@@ -24,6 +25,8 @@ func NewServer() *KTFServer {
 
 func (ks *KTFServer) registerRoutes() {
 	ks.Engine.RedirectTrailingSlash = true
+
+	ks.Engine.Use(static.Serve("/204e31a719dfa96a4bfcbd37a553079d5f738e7b", static.LocalFile("public/", true)))
 
 	api := ks.Engine.Group("/api")
 	api.OPTIONS("/*kek", ks.statusHandler())
