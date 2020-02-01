@@ -144,7 +144,7 @@ export default {
                     buf[i] = data[i - dataAddr];
                 }
 
-                window.wasmdecrypt.exports.encrypt();
+                window.wasmdecrypt.exports.decrypt();
 
                 let resultAddr = window.wasmdecrypt.exports.resultAddr();
 
