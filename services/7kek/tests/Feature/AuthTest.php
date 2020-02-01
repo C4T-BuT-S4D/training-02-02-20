@@ -12,7 +12,7 @@ class AuthTest extends TestCase
     public function testRegistration()
     {
         $response = $this->post('/api/auth/register', [
-            "email" => "priah@mail.ru",
+            "username" => "priah",
             "password" => "KissMyAss"
         ])->json();
 
@@ -25,7 +25,7 @@ class AuthTest extends TestCase
         $user->save();
 
         $response = $this->post('/api/auth/login', [
-            "email" => $user->email,
+            "username" => $user->username,
             "password" => "12345qwerty"
         ])->json();
 

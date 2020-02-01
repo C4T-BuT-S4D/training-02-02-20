@@ -22,7 +22,7 @@ class ProfilesTest extends TestCase
         $results = $this->get("/api/profiles/{$user->id}")->json();
 
         $this->assertEquals("ok", $results["status"]);
-        $this->assertEquals($user->email, $results["user"]["email"]);
+        $this->assertEquals($user->username, $results["user"]["username"]);
         $this->assertCount(1, $results["user"]["sections"]);
     }
 }
