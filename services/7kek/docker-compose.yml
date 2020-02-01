@@ -28,7 +28,7 @@ services:
     ports:
       - "4455:80"
     volumes:
-      - ./:/var/www
+      - ./:/var/www:rw,delegated
       - ./nginx/conf.d/:/etc/nginx/conf.d/
     networks:
       - app-network
@@ -48,7 +48,7 @@ services:
       SERVICE_TAGS: dev
       SERVICE_NAME: mysql
     volumes:
-      - db_data:/var/lib/mysql/
+      - db_data:/var/lib/mysql/:rw,delegated
       - ./mysql/my.cnf:/etc/mysql/my.cnf
     networks:
       - app-network
