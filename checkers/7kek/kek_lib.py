@@ -23,18 +23,22 @@ class CheckMachine:
 
         r = sess.post(f'{self.url}/api/auth/register', data={'username': username, 'password': password})
         check_response(r, 'Could not register')
-        return r.json()["user"]["id"]
+        data = get_json(r, 'Could not register')
+        assert_in('user', data, 'Could not register')
+        assert_in('id', data['user'], 'Could not register')
+
+        return data["user"]["id"]
 
     def login_user(self, username, password):
         sess = get_initialized_session()
         r = sess.post(f'{self.url}/api/auth/login', data={'username': username, 'password': password})
 
         check_response(r, 'Could not login')
+        data = get_json(r, 'Could not login')
+        assert_in('token', data, 'Could not login')
+        assert_in('token', data['token'], 'Could not login')
 
-        if "token" not in r.json():
-            cquit(Status.MUMBLE, "Could not login")
-
-        return r.json()["token"]["token"]
+        return data["token"]["token"]
 
     def select_token(self, token):
         self.token = token
@@ -47,7 +51,11 @@ class CheckMachine:
                       data={'title': section_title, 'description': rnd_string(50), "is_private": int(private), "token": self.token})
 
         check_response(r, 'Could not create section')
-        section_id = r.json()["section"]["id"]
+        data = get_json(r, 'Could not create section')
+        assert_in('section', data, 'Could not create section')
+        assert_in('id', data['section'], 'Could not create section')
+
+        section_id = data["section"]["id"]
         return section_id
 
     def create_post(self, section_id, content=None):
@@ -64,7 +72,12 @@ class CheckMachine:
                       ]), "section_id": section_id, "token": self.token})
 
         check_response(r, 'Could not create post')
-        post_id = r.json()["post"]["id"]
+        data = get_json(r, 'Could not create post')
+        assert_in('post', data, 'Could not create post')
+        assert_in('id', data['post'], 'Could not create post')
+
+
+        post_id = data["post"]["id"]
 
         return post_id, title
 
@@ -73,8 +86,10 @@ class CheckMachine:
 
         r = sess.get(f'{self.url}/api/sections/{section_id}/posts')
         check_response(r, 'Could not load section posts')
+        data = get_json(r, 'Could not load section posts')
+        assert_in('posts', data, 'Could not load section posts')
 
-        return r.json()["posts"]
+        return data["posts"]
 
     def invite_to_section(self, section_id, user2_id):
         sess = get_initialized_session()
@@ -83,17 +98,23 @@ class CheckMachine:
             "whom": user2_id,
             "token": self.token
         })
+        
         check_response(r, "Could not invite user")
+        data = get_json(r, "Could not invite user")
 
-        assert_eq(r.json()["status"], "ok", "Could not invite user")
+        assert_in('status', data, "Could not invite user")
+        assert_eq(data["status"], "ok", "Could not invite user")
 
     def enumerate_last_sections(self):
         sess = get_initialized_session()
 
         r = sess.get(f'{self.url}/api/sections')
-        check_response(r, "Could not load sections")
 
-        return r.json()["sections"]
+        check_response(r, "Could not load sections")
+        data = get_json(r, "Could not load sections")
+        assert_in('sections', data, "Could not load sections")
+
+        return data["sections"]
 
     def search_posts(self, word):
         sess = get_initialized_session()
@@ -101,5 +122,7 @@ class CheckMachine:
         r = sess.get(f'{self.url}/api/search/private?token=' + self.token + "&q=" + word)
 
         check_response(r, "Could not search")
+        data = get_json(r, "Could not search")
+        assert_in('posts', data, "Could not search")
 
-        return r.json()["posts"]
+        return data["posts"]

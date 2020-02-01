@@ -30,12 +30,12 @@ def check(host):
     if found is None:
         cquit(Status.MUMBLE, 'Did not find a freshly created section')
 
-    if "owner" not in found:
-        cquit(Status.MUMBLE, 'Section enumeration does not have owners listed')
+    assert_in('owner', found, 'Section enumeration does not have owners listed')
 
     post_id, title = cm.create_post(section_id, rnd_string(40))
 
     posts = cm.get_section_posts(section_id)
+    assert_gt(len(posts), 0, 'Could not find created post')
     assert_eq(posts[0]["id"], post_id, 'Could not find created post')
 
     user2 = rnd_username()
@@ -46,6 +46,7 @@ def check(host):
 
     cm.select_token(token2)
     cm.get_section_posts(section_id)
+    assert_gt(len(posts), 0, 'Could not find created post as invited user')
     assert_eq(posts[0]["id"], post_id, 'Could not find created post as invited user')
 
     ans = [x["id"] for x in cm.search_posts(title)]
@@ -85,7 +86,7 @@ def get(host, flag_id, flag, vuln):
 
     found = False
     for post in posts:
-        if post["description"] == flag:
+        if post.get("description") == flag:
             found = True
 
     if not found:
