@@ -11,10 +11,10 @@ PORT = 9997
 class CheckMachine:
     @property
     def url(self):
-        return f'http://{self.host}:{self.port}/api'
+        return f'http://{self.c.host}:{self.port}/api'
 
-    def __init__(self, host):
-        self.host = host
+    def __init__(self, checker):
+        self.c = checker
         self.port = PORT
 
     def register(self):
@@ -27,9 +27,9 @@ class CheckMachine:
         }
         r = requests.post(url, json=data)
 
-        check_response(r, 'Could not register')
-        data = get_json(r, 'Invalid response from register')
-        assert_eq(data, {'status': 'ok'}, 'Could not register')
+        self.c.check_response(r, 'Could not register')
+        data = self.c.get_json(r, 'Invalid response from register')
+        self.c.assert_eq(data, {'status': 'ok'}, 'Could not register')
 
         return username, password
 
@@ -43,9 +43,9 @@ class CheckMachine:
         }
         r = sess.post(url, json=data)
 
-        check_response(r, 'Could not login')
-        data = get_json(r, 'Invalid response from login')
-        assert_eq(data, {'status': 'ok'}, 'Could not login')
+        self.c.check_response(r, 'Could not login')
+        data = self.c.get_json(r, 'Invalid response from login')
+        self.c.assert_eq(data, {'status': 'ok'}, 'Could not login')
 
         return sess
 
@@ -54,8 +54,8 @@ class CheckMachine:
 
         r = sess.get(url)
 
-        check_response(r, 'Could not get me page')
-        data = get_json(r, 'Invalid response from me')
+        self.c.check_response(r, 'Could not get me page')
+        data = self.c.get_json(r, 'Invalid response from me')
 
         return data
 
@@ -64,11 +64,11 @@ class CheckMachine:
 
         r = requests.get(url)
 
-        check_response(r, 'Could not get user listing')
-        data = get_json(r, 'Invalid response from user listing')
-        assert_eq(type(data), dict, 'Invalid response from user listing')
-        assert_in('count', data, 'Invalid response from user listing')
-        assert_in('users', data, 'Invalid response from user listing')
+        self.c.check_response(r, 'Could not get user listing')
+        data = self.c.get_json(r, 'Invalid response from user listing')
+        self.c.assert_eq(type(data), dict, 'Invalid response from user listing')
+        self.c.assert_in('count', data, 'Invalid response from user listing')
+        self.c.assert_in('users', data, 'Invalid response from user listing')
 
         return data['users']
 
@@ -76,9 +76,9 @@ class CheckMachine:
         url = f'{self.url}/new_collab/'
 
         r = sess.post(url, json={'format': f})
-        check_response(r, 'Could not create new collab')
-        data = get_json(r, 'Invalid response from new collab')
-        assert_in('token', data, 'Invalid response from new collab')
+        self.c.check_response(r, 'Could not create new collab')
+        data = self.c.get_json(r, 'Invalid response from new collab')
+        self.c.assert_in('token', data, 'Invalid response from new collab')
 
         return data['token']
 
@@ -86,10 +86,10 @@ class CheckMachine:
         url = f'{self.url}/get_collab/{token}/'
 
         r = sess.get(url)
-        check_response(r, 'Could not get collab')
-        data = get_json(r, 'Invalid response from get collab')
-        assert_in('data', data, 'Invalid response from get collab')
-        assert_in('format', data, 'Invalid response from get collab')
+        self.c.check_response(r, 'Could not get collab')
+        data = self.c.get_json(r, 'Invalid response from get collab')
+        self.c.assert_in('data', data, 'Invalid response from get collab')
+        self.c.assert_in('format', data, 'Invalid response from get collab')
 
         return data
 
@@ -97,31 +97,31 @@ class CheckMachine:
         url = f'{self.url}/my_collabs/'
 
         r = sess.get(url)
-        check_response(r, 'Could not get my collabs')
-        data = get_json(r, 'Invalid response from get my collabs')
-        assert_eq(type(data), list, 'Invalid response from get my collabs')
+        self.c.check_response(r, 'Could not get my collabs')
+        data = self.c.get_json(r, 'Invalid response from get my collabs')
+        self.c.assert_eq(type(data), list, 'Invalid response from get my collabs')
 
         return data
 
     def get_collab_in_ws(self, token):
         ws = websocket.WebSocket()
-        url = f'ws://{self.host}:{self.port}/api/subscribe/'
+        url = f'ws://{self.c.host}:{self.port}/api/subscribe/'
         ws.connect(url)
         ws.send(json.dumps({"token": token}))
-        assert_eq(101, ws.status, 'Invalid ws status on subscribe')
+        self.c.assert_eq(101, ws.status, 'Invalid ws status on subscribe')
         return ws
 
     def get_collab_out_ws(self):
         ws = websocket.WebSocket()
-        url = f'ws://{self.host}:{self.port}/api/code/'
+        url = f'ws://{self.c.host}:{self.port}/api/code/'
         ws.connect(url)
         data = ws.recv()
         try:
             decoded = json.loads(data)
         except ValueError:
-            cquit(Status.MUMBLE, 'Invalid data from code websocket')
+            self.c.cquit(Status.MUMBLE, 'Invalid data from code websocket')
         else:
-            assert_in('sender_id', decoded, 'sender_id not returned for code websocket')
+            self.c.assert_in('sender_id', decoded, 'sender_id not returned for code websocket')
             return ws
 
     @staticmethod
@@ -132,16 +132,15 @@ class CheckMachine:
         })
         return ws.send(to_send)
 
-    @staticmethod
-    def recv_collab_data(ws):
+    def recv_collab_data(self, ws):
         encoded = ws.recv()
         try:
             resp = json.loads(encoded)
         except (ValueError, UnicodeDecodeError):
-            cquit(Status.MUMBLE, 'Invalid data from code websocket')
+            self.c.cquit(Status.MUMBLE, 'Invalid data from code websocket')
         else:
-            assert_in('data', resp, 'Invalid data from code websocket')
-            assert_in('sender_id', resp, 'sender_id not returned for subscribe websocket')
+            self.c.assert_in('data', resp, 'Invalid data from code websocket')
+            self.c.assert_in('sender_id', resp, 'sender_id not returned for subscribe websocket')
             return resp['data']
 
     @staticmethod
