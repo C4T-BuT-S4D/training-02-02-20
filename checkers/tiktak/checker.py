@@ -3,6 +3,7 @@ import hashlib
 import sys
 import tempfile
 import random
+from traceback import format_exc
 
 import requests
 
@@ -158,4 +159,5 @@ except (requests.exceptions.ConnectionError, requests.exceptions.ConnectTimeout)
 except SystemError as e:
     raise
 except Exception as e:
-    cquit(Status.ERROR, 'System error', str(e))
+    tb = format_exc()
+    cquit(Status.ERROR, 'System error', f'Error: {e}\n{tb}')

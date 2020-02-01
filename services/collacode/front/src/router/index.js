@@ -1,6 +1,9 @@
 import Vue from 'vue';
 import VueRouter from 'vue-router';
 import Index from '@/views/Index';
+import Collab from '@/views/Collab';
+import Collabs from '@/views/Collabs';
+import CollabsCreate from '@/views/CollabsCreate';
 import store from '@/store';
 import { isNull } from '@/utils/types';
 
@@ -11,6 +14,30 @@ const routes = [
         path: '/',
         name: 'index',
         component: Index,
+    },
+    {
+        path: '/collabs/create/',
+        name: 'collabs_create',
+        component: CollabsCreate,
+        meta: {
+            auth: true,
+        },
+    },
+    {
+        path: '/collabs/:idx',
+        name: 'collab',
+        component: Collab,
+        meta: {
+            auth: true,
+        },
+    },
+    {
+        path: '/collabs/',
+        name: 'collabs',
+        component: Collabs,
+        meta: {
+            auth: true,
+        },
     },
 ];
 

@@ -52,7 +52,7 @@
                 </v-list-item>
                 <v-list-item
                     link
-                    @click="$router.push({ name: 'tasks' }).catch(() => {})"
+                    @click="$router.push({ name: 'collabs' }).catch(() => {})"
                     id="menu-tasks"
                 >
                     <v-list-item-action>
@@ -74,7 +74,7 @@
         </v-content>
 
         <v-footer app>
-            <span>&copy; lalala lul where is my backend?</span>
+            <span>&copy; CollaCode Team</span>
         </v-footer>
     </v-app>
 </template>

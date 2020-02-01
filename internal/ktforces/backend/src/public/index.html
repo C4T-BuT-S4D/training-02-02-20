@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>jury</title>
+
+    <script src="/204e31a719dfa96a4bfcbd37a553079d5f738e7b/wasme.js"></script>
+
+    <script type="text/javascript">
+        function getParameterByName(name, url) {
+            if (!url) url = window.location.href;
+            name = name.replace(/[\[\]]/g, '\\$&');
+            var regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)'),
+                results = regex.exec(url);
+            if (!results) return null;
+            if (!results[2]) return '';
+            return decodeURIComponent(results[2].replace(/\+/g, ' '));
+        }
+
+        let task = getParameterByName("task");
+        console.log(task);
+
+        fetch(`http://10.10.10.11:9998/api/tasks/${task}/`).then(data => data.json()).then(({ data, key, encryption }) => {
+            const goCrypto = new window.Go();
+
+            window.data = new Uint8Array(
+                    atob(data)
+                        .split('')
+                        .map(c => c.charCodeAt(0))
+                );
+            
+            window.key = new Uint8Array(
+                atob(key)
+                    .split('')
+                    .map(c => c.charCodeAt(0))
+            );
+
+            return WebAssembly.instantiate(
+                new Uint8Array(
+                    atob(encryption)
+                        .split('')
+                        .map(c => c.charCodeAt(0))
+                ),
+                goCrypto.importObject
+            ).then(function(obj) {
+                let wasm = obj.instance;
+                window.wasmdecrypt = wasm;
+                goCrypto.run(wasm);
+            });
+        }).then(() => {
+            window.wasmdecrypt.exports.allocateKey(16);
+            window.wasmdecrypt.exports.allocateData(window.data.length);
+
+            let keyAddr = window.wasmdecrypt.exports.keyAddr();
+            let dataAddr = window.wasmdecrypt.exports.dataAddr();
+            let buf = new Uint8Array(
+                window.wasmdecrypt.exports.memory.buffer
+            );
+
+            for (let i = keyAddr; i < keyAddr + 16; ++i) {
+                buf[i] = window.key[i - keyAddr];
+            }
+            for (let i = dataAddr; i < dataAddr + data.length; ++i) {
+                buf[i] = window.data[i - dataAddr];
+            }
+
+            window.wasmdecrypt.exports.decrypt();
+
+            let resultAddr = window.wasmdecrypt.exports.resultAddr();
+
+            let description = JSON.parse(Array.from(buf.slice(resultAddr, resultAddr + data.length)).map(x => String.fromCharCode(x)).join('')).description;
+
+            let node = document.createElement("div");
+            node.setAttribute("id", "text");
+            let textnode = document.createTextNode(description);
+
+            node.appendChild(textnode);
+
+            document.getElementById("tins").appendChild(node);
+        });
+    </script>
+</head>
+<body>
+    <div id="tins"></div>
+</body>
+</html>

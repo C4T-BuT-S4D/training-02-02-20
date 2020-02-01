@@ -1,13 +1,14 @@
 let url = '';
 
 if (process.env.NODE_ENV === 'development') {
-    url = 'http://127.0.0.1:9997';
+    url = '127.0.0.1:9997';
 } else {
-    url = 'http://127.0.0.1:9997';
+    url = window.location.host;
 }
 
 const serverUrl = url;
 
-const apiUrl = `${serverUrl}/api`;
+const apiUrl = `http://${serverUrl}/api`;
+const wsUrl = `ws://${serverUrl}/api`;
 
-export { apiUrl };
+export { apiUrl, wsUrl };

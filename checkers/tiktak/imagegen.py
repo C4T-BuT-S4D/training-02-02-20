@@ -1,3 +1,4 @@
+import os
 import subprocess
 
 from PIL import Image, ImageDraw, ImageFont

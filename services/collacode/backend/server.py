@@ -2,6 +2,7 @@ import asyncio
 import secrets
 from functools import wraps
 
+import ujson
 from aioredis.pubsub import Receiver
 from diff_match_patch import diff_match_patch
 from sanic import Sanic
@@ -14,7 +15,11 @@ import exceptions
 import storage
 
 app = Sanic('collacode')
-CORS(app, resources={r"/api/*": {"origins": "http://127.0.0.1:8080"}})
+CORS(app,
+    resources={r"/api/*": {"origins": "http://127.0.0.1:8080"}},
+    supports_credentials=True,
+    automatic_options=True,
+)
 
 
 @app.exception(NotFound)
@@ -26,7 +31,7 @@ def login_required(f):
     @wraps(f)
     async def wrapper(request, *args, **kwargs):
         loop = asyncio.get_event_loop()
-        redis = await storage.get_async_redis_pool(loop)
+        redis = await storage.get_async_redis(loop)
 
         session = request.cookies.get('session')
         is_authorized = session and redis.exists(session)
@@ -40,46 +45,68 @@ def login_required(f):
     return wrapper
 
 
-async def get_code_websocket_handler(token):
+@app.websocket("/api/subscribe/")
+async def subscribe_handler(_request, ws):
+    data = await ws.recv()
+    try:
+        decoded_data = ujson.decode(data)
+    except ValueError:
+        await ws.send(ujson.dumps({'error': 'invalid json data'}))
+        return
+
+    token = decoded_data.get('token', '')
+
     loop = asyncio.get_event_loop()
-    redis = await storage.get_async_redis_pool(loop)
+    redis = await storage.get_async_redis(loop)
 
-    async def in_handler(ws):
-        dmp = diff_match_patch()
+    mpsc = Receiver(loop=loop)
+    await redis.subscribe(mpsc.channel(f'updates:{token}'))
+    async for channel, msg in mpsc.iter():
+        await ws.send(msg.decode())
 
-        while True:
-            data = await ws.recv()
-            cur_data = await redis.get(token) or b''
-            cur_data = cur_data.decode()
 
-            try:
-                patch = dmp.patch_fromText(data)
-            except ValueError:
-                await ws.send({'error': 'invalid patch'})
-                continue
+@app.websocket("/api/code/")
+async def code_handler(_request, ws):
+    loop = asyncio.get_event_loop()
+    redis = await storage.get_async_redis(loop)
+    sender_id = secrets.token_hex(5)
+    await ws.send(ujson.dumps({'sender_id': sender_id}))
 
-            new_data, _ = dmp.patch_apply(patch, cur_data)
+    dmp = diff_match_patch()
 
-            if len(new_data) > 32768:
-                await ws.send({'error': 'code too long'})
-                continue
+    while True:
+        data = await ws.recv()
+        try:
+            decoded_data = ujson.decode(data)
+        except ValueError:
+            await ws.send(ujson.dumps({'error': 'invalid json data'}))
+            continue
 
-            await redis.set(token, new_data)
-            await redis.publish(f'updates:{token}', data)
+        token = decoded_data['token']
+        diff = decoded_data['diff']
 
-    async def out_handler(ws):
-        mpsc = Receiver(loop=loop)
-        await redis.subscribe(mpsc.channel(f'updates:{token}'))
-        async for channel, msg in mpsc.iter():
-            await ws.send(msg)
+        cur_data = await redis.get(token) or b''
+        cur_data = cur_data.decode()
 
-    async def handler(_request, ws):
-        in_task = asyncio.create_task(in_handler(ws))
-        out_task = asyncio.create_task(out_handler(ws))
-        await in_task
-        await out_task
+        try:
+            patch = dmp.patch_fromText(diff)
+        except ValueError:
+            await ws.send(ujson.dumps({'error': 'invalid patch'}))
+            continue
 
-    return handler
+        new_data, _ = dmp.patch_apply(patch, cur_data)
+
+        if len(new_data) > 32768:
+            await ws.send(ujson.dumps({'error': 'code too long'}))
+            continue
+
+        await redis.set(token, new_data)
+
+        publish_data = ujson.dumps({
+            'sender_id': sender_id,
+            'data': diff,
+        })
+        await redis.publish(f'updates:{token}', publish_data)
 
 
 @app.route('/api/register/', methods=['POST', 'OPTIONS'])
@@ -93,16 +120,16 @@ async def register(request):
     username = request.json.get('username')
     password = request.json.get('password')
     if not username or not password:
-        return json({'error': 'fill all fields'})
+        return json({'error': 'fill all fields'}, status=400)
     if len(username) < 5:
-        return json({'error': 'too short username'})
+        return json({'error': 'too short username'}, status=400)
 
     loop = asyncio.get_event_loop()
-    redis = await storage.get_async_redis_pool(loop)
+    redis = await storage.get_async_redis(loop)
     try:
         await storage.add_user(redis, username, password)
     except exceptions.UserExistsException:
-        return json({'error': 'username taken'})
+        return json({'error': 'username taken'}, status=400)
 
     return json({'status': 'ok'})
 
@@ -121,12 +148,12 @@ async def login(request):
         return json({'error': 'fill all fields'}, status=400)
 
     loop = asyncio.get_event_loop()
-    redis = await storage.get_async_redis_pool(loop)
+    redis = await storage.get_async_redis(loop)
     user = await storage.get_user(redis, username)
     if not user:
-        return json({'error': 'invalid credentials'})
+        return json({'error': 'invalid credentials'}, status=403)
     if user.get('password', '') != password:
-        return json({'error': 'invalid credentials'})
+        return json({'error': 'invalid credentials'}, status=403)
 
     session = secrets.token_hex(30)
     await storage.set_session(redis, session, user)
@@ -148,7 +175,7 @@ async def logout(_request):
 @login_required
 async def me(request):
     loop = asyncio.get_event_loop()
-    redis = await storage.get_async_redis_pool(loop)
+    redis = await storage.get_async_redis(loop)
 
     user = await storage.get_current_user(redis, request)
     return json(user)
@@ -158,7 +185,7 @@ async def me(request):
 @login_required
 async def list_my_collabs(request):
     loop = asyncio.get_event_loop()
-    redis = await storage.get_async_redis_pool(loop)
+    redis = await storage.get_async_redis(loop)
 
     user = await storage.get_current_user(redis, request)
     collabs = await storage.get_users_collabs(redis, user['username'])
@@ -168,7 +195,7 @@ async def list_my_collabs(request):
 @app.route('/api/users/')
 async def list_users(request):
     loop = asyncio.get_event_loop()
-    redis = await storage.get_async_redis_pool(loop)
+    redis = await storage.get_async_redis(loop)
     limit = request.args.get('limit', 10)
     offset = request.args.get('offset', 0)
     try:
@@ -193,12 +220,9 @@ async def new_collab(request):
         return json({'error': 'only json'}, status=400)
 
     loop = asyncio.get_event_loop()
-    redis = await storage.get_async_redis_pool(loop)
+    redis = await storage.get_async_redis(loop)
 
     token = await storage.add_collab(redis, request)
-
-    handler = await get_code_websocket_handler(token)
-    app.add_websocket_route(handler, f'/api/code/{token}')
 
     return json({'token': token})
 
@@ -207,7 +231,7 @@ async def new_collab(request):
 @app.route('/api/get_collab/<token>/')
 async def get_collab(_request, token):
     loop = asyncio.get_event_loop()
-    redis = await storage.get_async_redis_pool(loop)
+    redis = await storage.get_async_redis(loop)
 
     data = await redis.get(token)
     f = await redis.get(f'code:{token}:format')

@@ -5,6 +5,7 @@ go 1.13
 require (
 	github.com/bwmarrin/go-alone v0.0.0-20190806015146-742bb55d1631
 	github.com/gin-contrib/gzip v0.0.1
+	github.com/gin-contrib/static v0.0.0-20191128031702-f81c604d8ac2
 	github.com/gin-gonic/gin v1.5.0
 	github.com/go-redis/redis/v7 v7.0.0-beta.4
 	github.com/google/uuid v1.1.1

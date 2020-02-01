@@ -19,9 +19,9 @@ def quit_driver_wrapper(driver):
 def captcha(nonce):
     return hmac.new(b"d528291b1e8e61b84389760fce409faf9c4be2c3", nonce.encode(), hashlib.sha1).hexdigest()
 
-def wait_id(driver, idx, where):
+def wait_id(driver, idx, where, tm=10):
     try:
-        WebDriverWait(driver, 10).until(
+        WebDriverWait(driver, tm).until(
             EC.presence_of_element_located((By.ID, idx))
         )
     except TimeoutException:
@@ -36,7 +36,7 @@ def click(driver, idx, F, o=False):
         elem.click()
     except NoSuchElementException:
         cquit(Status.MUMBLE, f"Can't find {idx} on {F}")
-    driver.implicitly_wait(0.5)
+    driver.implicitly_wait(2)
 
 def fill(driver, idx, text, F):
     try:

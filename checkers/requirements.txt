@@ -1,6 +1,7 @@
 beautifulsoup4
 checklib
 diff-match-patch
+gevent
 lorem
 lxml
 pillow

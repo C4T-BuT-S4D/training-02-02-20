@@ -5,24 +5,15 @@ import ujson
 
 import exceptions
 
-_async_redis_pool = None
 
-
-async def get_async_redis_pool(loop):
-    global _async_redis_pool
-
-    if not _async_redis_pool:
-        address = f'redis://redis:6379'
-        db = 1
-        _async_redis_pool = await aioredis.create_redis_pool(
-            address=address,
-            db=db,
-            minsize=5,
-            maxsize=15,
-            loop=loop,
-        )
-
-    return _async_redis_pool
+async def get_async_redis(loop):
+    address = f'redis://redis:6379'
+    db = 1
+    return await aioredis.create_redis(
+        address=address,
+        db=db,
+        loop=loop,
+    )
 
 
 async def add_user(redis, username, password):
@@ -77,6 +68,8 @@ async def get_users_collabs(redis, username):
 async def get_current_user(redis, request):
     session = request.cookies['session']
     user_data = await redis.get(session)
+    if not user_data:
+        return None
     return ujson.loads(user_data)
 
 
