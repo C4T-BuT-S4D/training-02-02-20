@@ -1,39 +1,44 @@
 #!/usr/bin/env python3
 
+import os
+import sys
+import gevent.monkey
+
+
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+gevent.monkey.patch_all()
+
+
 from diff_match_patch import diff_match_patch
 
 from collacode_lib import *
-
-import gevent.monkey
-
-gevent.monkey.patch_all()
 
 
 class Checker(BaseChecker):
     def __init__(self, *args, **kwargs):
         super(Checker, self).__init__(*args, **kwargs)
         self.dmp = diff_match_patch()
-        self.mch = CheckMachine(self.host)
+        self.mch = CheckMachine(self)
 
     def action(self, action, *args, **kwargs):
         try:
             super(Checker, self).action(action, *args, **kwargs)
         except requests.exceptions.ConnectionError:
-            cquit(Status.DOWN, 'Connection error')
+            self.cquit(Status.DOWN, 'Connection error')
         except websocket._exceptions.WebSocketConnectionClosedException:
-            cquit(Status.DOWN, 'Websocket closed unexpectedly')
+            self.cquit(Status.DOWN, 'Websocket closed unexpectedly')
 
     def check(self, *_args, **_kwargs):
         username, password = self.mch.register()
         users = self.mch.get_user_listing()
-        assert_in(username, users, 'Could not find user in listing')
+        self.assert_in(username, users, 'Could not find user in listing')
         sess = self.mch.login(username, password)
         me = self.mch.get_me(sess)
 
-        assert_in('username', me, 'Invalid me')
-        assert_in('password', me, 'Invalid me')
-        assert_eq(me['username'], username, 'Invalid me')
-        assert_eq(me['password'], password, 'Invalid me')
+        self.assert_in('username', me, 'Invalid me')
+        self.assert_in('password', me, 'Invalid me')
+        self.assert_eq(me['username'], username, 'Invalid me')
+        self.assert_eq(me['password'], password, 'Invalid me')
 
         f, data = self.mch.random_data()
         collab_token = self.mch.new_collab(sess, f)
@@ -50,18 +55,18 @@ class Checker(BaseChecker):
 
             self.mch.send_collab_data(collab_out_ws, collab_token, diff)
             result = self.mch.recv_collab_data(collab_in_ws)
-            assert_eq(result, diff, 'Invalid data returned from collab socket')
+            self.assert_eq(result, diff, 'Invalid data returned from collab socket')
 
             cur_data += block
 
         full = self.mch.get_collab(sess, collab_token)
-        assert_eq(full['format'], f, 'Invalid collab format')
-        assert_eq(full['data'], data, 'Invalid collab data')
+        self.assert_eq(full['format'], f, 'Invalid collab format')
+        self.assert_eq(full['data'], data, 'Invalid collab data')
 
         collabs = self.mch.get_my_collabs(sess)
-        assert_in(collab_token, collabs, 'Collab not found in listing')
+        self.assert_in(collab_token, collabs, 'Collab not found in listing')
 
-        cquit(Status.OK)
+        self.cquit(Status.OK)
 
     def put(self, flag, flag_id, *_args, **_kwargs):
         username, password = self.mch.register()
@@ -85,9 +90,9 @@ class Checker(BaseChecker):
         self.mch.send_collab_data(collab_out_ws, collab_token, diff)
         result = self.mch.recv_collab_data(collab_in_ws)
 
-        assert_eq(result, diff, 'Invalid data returned from collab socket')
+        self.assert_eq(result, diff, 'Invalid data returned from collab socket')
 
-        cquit(Status.OK, f"{username}:{password}:{collab_token}")
+        self.cquit(Status.OK, f"{username}:{password}:{collab_token}")
 
     def get(self, flag, flag_id, *_args, **_kwargs):
         default_status = status.Status.CORRUPT
@@ -96,7 +101,7 @@ class Checker(BaseChecker):
         sess = self.mch.login(username, password)
 
         my_collabs = self.mch.get_my_collabs(sess)
-        assert_in(
+        self.assert_in(
             collab_token, my_collabs,
             'Could not find collab in my listing',
             status=default_status,
@@ -104,15 +109,14 @@ class Checker(BaseChecker):
 
         s = get_initialized_session()
         collab = self.mch.get_collab(s, collab_token)
-        assert_eq(collab['format'], 'json', 'Invalid collab format', status=default_status)
-        with handle_exception(
-                ValueError,
-                public='Invalid collab data',
-                private='JSON decode exception while checking collab',
-                status=default_status):
+        self.assert_eq(collab['format'], 'json', 'Invalid collab format', status=default_status)
+        try:
             collab_data = json.loads(collab['data'])
+        except ValueError:
+            self.cquit(default_status, 'Invalid collab data', 'JSON decode exception while checking collab')
+            
 
-        assert_in('flag', collab_data, 'No flag in collab', status=default_status)
-        assert_eq(flag, collab_data['flag'], 'Invalid flag in collab', status=default_status)
+        self.assert_in('flag', collab_data, 'No flag in collab', status=default_status)
+        self.assert_eq(flag, collab_data['flag'], 'Invalid flag in collab', status=default_status)
 
-        cquit(Status.OK)
+        self.cquit(Status.OK)

@@ -1,0 +1,19 @@
+{
+    "name": "alagunto/search_engine",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Alagunto",
+            "email": "priah@mail.ru"
+        }
+    ],
+    "require": {
+        "react/event-loop": "^1.1",
+        "react/http": "^0.8.6"
+    },
+    "autoload": {
+        "psr-4": {
+            "Search\\": "src/"
+        }
+    }
+}

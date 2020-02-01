@@ -1,6 +1,6 @@
 FROM python:3.7-alpine
 
-MAINTAINER @pomo_mondreganto
+MAINTAINER tg: @pomo_mondreganto
 
 ENV PYTHONUNBUFFERED=1
 
