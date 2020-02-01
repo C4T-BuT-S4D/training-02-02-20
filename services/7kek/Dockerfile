@@ -49,4 +49,6 @@ USER www
 EXPOSE 9000
 
 COPY entrypoint.sh /tmp/run.sh
+COPY wait-for-it.sh /tmp/wait-for-it.sh
+
 ENTRYPOINT ["/tmp/run.sh"]
