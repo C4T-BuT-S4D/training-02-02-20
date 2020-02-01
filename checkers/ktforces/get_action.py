@@ -18,27 +18,21 @@ def run(driver, ip, flag_id, flag, vuln):
     try:
         wait_id(driver, "me-button", "login")
     except NoSuchElementException:
-        cquit(Status.MUMBLE, f"login")
+        cquit(Status.MUMBLE, f"Can't login")
 
     if vuln == "1":
         mch1.check_profile(False, status=Status.CORRUPT)
     else:
         mch1.check_task(task_id, flag, status=Status.CORRUPT)
 
-    driver.get(f"{mch1.url}tasks/")
+    if vuln in "23":
+        driver.get("http://10.10.10.11:9998/204e31a719dfa96a4bfcbd37a553079d5f738e7b?task=" + task_id)
 
-    try:
-        wait_id(driver, "t-list", "check_task")
-    except NoSuchElementException:
-        cquit(Status.MUMBLE, f"Can't open task list")
-
-    tasks = re.findall('.{8}-.{4}-.{4}-.{4}-.{12}', driver.page_source)
-
-    for task in tasks:
-        driver.get(f"{mch1.url}tasks/{task}/")
         try:
-            wait_id(driver, "tv-data", 'check_task')
+            wait_id(driver, "text", "jury task")
         except NoSuchElementException:
-            cquit(Status.MUMBLE, f"Can't find tv-data on task_view")
+            cquit(Status.CORRUPT, f"Can't open task")
+
+        assert_in(flag, driver.page_source, f"Can't find flag", Status.CORRUPT)
 
     cquit(Status.OK)
