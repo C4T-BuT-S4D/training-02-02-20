@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Post;
+use App\Services\SearchService;
 use Illuminate\Http\Request;
 
 class PostsController extends Controller
@@ -17,9 +18,12 @@ class PostsController extends Controller
         ]);
 
         /** @var Post $post */
-        $post = Post::create(request()->all()); // TODO: first vulnerability
+        $post = Post::create(request()->except("token"));
 
         auth()->user()->sections()->attach($post->section);
+
+        $searchService = new SearchService();
+        $searchService->indexPost($post);
 
         return [
             "status" => "ok",

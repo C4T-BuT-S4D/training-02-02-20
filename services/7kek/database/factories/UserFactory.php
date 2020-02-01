@@ -8,7 +8,7 @@ use Illuminate\Support\Str;
 
 $factory->define(User::class, function (Faker $faker) {
     return [
-        'email' => $faker->unique()->safeEmail,
+        'username' => $faker->unique()->userName,
         'password' => \Hash::make('12345qwerty')
     ];
 });

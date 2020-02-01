@@ -17,6 +17,8 @@ services:
       - ./php/local.ini:/usr/local/etc/php/conf.d/local.ini
     networks:
       - app-network
+    depends_on:
+      - db
 
   webserver:
     image: nginx:alpine
@@ -24,8 +26,7 @@ services:
     restart: unless-stopped
     tty: true
     ports:
-      - "80:80"
-      - "443:443"
+      - "4455:80"
     volumes:
       - ./:/var/www
       - ./nginx/conf.d/:/etc/nginx/conf.d/
@@ -33,7 +34,7 @@ services:
       - app-network
 
   db:
-    image: mysql:5.7.22
+    image: mysql:5.7.29
     container_name: db
     restart: unless-stopped
     tty: true
@@ -41,11 +42,13 @@ services:
       - "3306:3306"
     environment:
       MYSQL_DATABASE: laravel
+      MYSQL_USER: laravel
+      MYSQL_PASSWORD: blackcat
       MYSQL_ROOT_PASSWORD: your_mysql_root_password
       SERVICE_TAGS: dev
       SERVICE_NAME: mysql
     volumes:
-      - dbdata:/var/lib/mysql/
+      - db_data:/var/lib/mysql/
       - ./mysql/my.cnf:/etc/mysql/my.cnf
     networks:
       - app-network
@@ -55,5 +58,5 @@ networks:
     driver: bridge
 
 volumes:
-  dbdata:
+  db_data:
     driver: local

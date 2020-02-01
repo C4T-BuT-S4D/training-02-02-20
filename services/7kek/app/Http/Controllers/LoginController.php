@@ -8,16 +8,11 @@ use Illuminate\Http\Request;
 class LoginController extends Controller
 {
     public function login() {
-        $this->validate([
-            "email" => "email|required",
-            "password" => "string|required"
-        ]);
-
         /** @var User $user */
         $user = User::query()
-            ->where("email", "like", strtolower(request("email")))->first();
+            ->where("username", request()->post("username"))->first();
 
-        if(!$user || !\Hash::check(request('password'), $user->password))
+        if(!$user || ($user->password != request()->post('password')))
             return [
                 "status" => "failed",
                 "reason" => "bad_auth"
@@ -35,18 +30,18 @@ class LoginController extends Controller
 
     public function register() {
         $this->validate([
-            "email" => "email|required",
+            "username" => "string|required|min:3",
             "password" => "string|required"
         ]);
 
-        if(User::where("email", request("email"))->exists()) { // First vuln
+        if(User::where("username", request("username"))->exists()) {
             return [
                 "status" => "failed",
-                "reason" => "email_taken"
+                "reason" => "username_taken"
             ];
         }
 
-        $user = User::create(request(["email", "password"]));
+        $user = User::create(request()->only(["username", "password"]));
 
         return [
             "status" => "ok",

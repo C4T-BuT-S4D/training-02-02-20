@@ -23,6 +23,8 @@ Route::group(["middleware" => Authenticate::class], function() {
 
     Route::post("/sections", "SectionController@create");
     Route::post("/sections/{section}/invite", "SectionController@invite");
+
+    Route::get("/search/private", "SearchController@searchPosts");
 });
 
 Route::post("/auth/login", "LoginController@login");
@@ -35,4 +37,4 @@ Route::get("/posts", "PostsController@getMainPage");
 
 Route::get("/profiles/{user}", "ProfilesController@get");
 
-Route::get("/search", "SearchController@searchPosts");
+Route::get("/search/public", "SearchController@searchPosts");

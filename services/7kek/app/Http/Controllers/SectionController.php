@@ -4,24 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Post;
 use App\Section;
-use App\Services\SectionsService;
 use App\User;
 use Illuminate\Http\Request;
 
 class SectionController extends Controller
 {
-    /** @var SectionsService */
-    public $service;
-
-    public function __construct() {
-        $this->service = app(SectionsService::class);
-    }
-
     public function get() {
         return [
             "status" => "ok",
-            "sections" => Section::query()->orderBy("id", "desc")
-                ->simplePaginate(15, ['*'], 'page', request("page"))->items()
+            "sections" => Section::query()->orderBy("id", "desc")->with("owner")
+                ->simplePaginate(30, ['*'], 'page', request("page"))->items()
         ];
     }
 
@@ -39,12 +31,15 @@ class SectionController extends Controller
             ];
         }
 
+        /** @var Section $section */
         $section = Section::create([
             "title" => request("title"),
             "description" => request("description"),
             "is_private" => request("is_private"),
             "owner_id" => auth()->id()
         ]);
+
+        $section->users()->attach(auth()->user());
 
         return [
             "status" => "ok",
