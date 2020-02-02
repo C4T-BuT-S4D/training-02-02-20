@@ -4,7 +4,7 @@ import requests
 
 def captcha(nonce):
     # Just not to solve captcha manually
-    # You can calc it one time per 10 mins
+    # You can solve it using go
     return hmac.new(
         b"d528291b1e8e61b84389760fce409faf9c4be2c3",
         nonce.encode(),
