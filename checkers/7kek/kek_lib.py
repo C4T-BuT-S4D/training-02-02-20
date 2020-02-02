@@ -64,7 +64,7 @@ class CheckMachine:
         if content is None:
             content = rnd_string(40)
 
-        title = rnd_string(24)
+        title = rnd_string(24) + " kek"
 
         r = sess.post(f'{self.url}/api/posts',
                       data={'title': title, 'description': content, 'type': 'image', 'src': random.choice([
@@ -84,7 +84,7 @@ class CheckMachine:
     def get_section_posts(self, section_id):
         sess = get_initialized_session()
 
-        r = sess.get(f'{self.url}/api/sections/{section_id}/posts')
+        r = sess.get(f'{self.url}/api/sections/{section_id}/posts?token=' + self.token)
         check_response(r, 'Could not load section posts')
         data = get_json(r, 'Could not load section posts')
         assert_in('posts', data, 'Could not load section posts')
