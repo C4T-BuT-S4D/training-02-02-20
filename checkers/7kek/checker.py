@@ -49,7 +49,7 @@ def check(host):
     assert_gt(len(posts), 0, 'Could not find created post as invited user')
     assert_eq(posts[0]["id"], post_id, 'Could not find created post as invited user')
 
-    ans = [x["id"] for x in cm.search_posts(title)]
+    ans = [x["id"] for x in cm.search_posts(title.split()[0])]
 
     if post_id not in ans:
         cquit(Status.MUMBLE, "Could not search a post in private section")
