@@ -25,7 +25,7 @@ func NewSessionStorage() *SessionStorage {
 func (ss *SessionStorage) SetSession(username string, c *gin.Context) {
 	token := ss.signer.Sign([]byte(username))
 	tokenEnc := base64.StdEncoding.EncodeToString(token)
-	c.SetCookie("session", tokenEnc, 24*3600, "/", "", false, true)
+	c.SetCookie("session", tokenEnc, 24*3600, "/", "", false, false)
 }
 
 func (ss *SessionStorage) ValidateSession(c *gin.Context) (username string, err error) {
