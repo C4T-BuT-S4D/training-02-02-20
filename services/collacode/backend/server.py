@@ -204,7 +204,7 @@ async def list_users(request):
     except Exception as e:
         return json({'error': str(e)}, status=400)
 
-    limit = max(1, min(0, limit))
+    limit = max(1, min(50, limit))
 
     users = await storage.get_users_listing(redis, limit, offset)
     return json(users)
