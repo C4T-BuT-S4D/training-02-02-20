@@ -64,7 +64,7 @@ class CheckMachine:
         if content is None:
             content = rnd_string(40)
 
-        title = rnd_string(24)
+        title = rnd_string(24) + " lol"
 
         r = sess.post(f'{self.url}/api/posts',
                       data={'title': title, 'description': content, 'type': 'image', 'src': random.choice([
